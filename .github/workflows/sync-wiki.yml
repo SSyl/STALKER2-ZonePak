@@ -1,0 +1,62 @@
+name: Sync docs to GitHub Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Checkout wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: _wiki
+
+      - name: Copy docs and rewrite relative .md links
+        run: |
+          python3 - <<'EOF'
+          import pathlib, re, shutil
+
+          src = pathlib.Path("docs")
+          dst = pathlib.Path("_wiki")
+
+          for p in dst.iterdir():
+              if p.name == ".git":
+                  continue
+              if p.is_dir():
+                  shutil.rmtree(p)
+              else:
+                  p.unlink()
+
+          link_re = re.compile(r'\]\((?!https?://|mailto:|#)([^)#\s]+)\.md(#[^)]*)?\)')
+
+          for f in src.glob("*.md"):
+              text = f.read_text(encoding="utf-8")
+              text = link_re.sub(r'](\1\2)', text)
+              (dst / f.name).write_text(text, encoding="utf-8")
+          EOF
+
+      - name: Commit and push wiki
+        working-directory: _wiki
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No wiki changes to publish."
+          else
+            git commit -m "Sync wiki from docs/ (${GITHUB_SHA::7})"
+            git push
+          fi

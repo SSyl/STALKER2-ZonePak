@@ -1,5 +1,9 @@
 # ZonePak
 
+> [!IMPORTANT]
+> ZonePak should be considered alpha and is still under active development. While every effort is made to keep the
+> documentation and examples updated, they are bound to get outdated from time to time as development continues.
+
 ZonePak turns a folder of game-data changes and text changes into a S.T.A.L.K.E.R. 2 mod that you can install in
 the game's `~mods` folder or publish on Nexus Mods. The
 [README](https://github.com/SSyl/STALKER2-ZonePak/blob/main/README.md#quick-start) has the quick start, which installs the

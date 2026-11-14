@@ -1,5 +1,9 @@
 # ZonePak
 
+> [!IMPORTANT]
+> ZonePak should be considered alpha and is still under active development. While every effort is made to keep the
+> documentation and examples updated, they are bound to get outdated from time to time as development continues.
+
 ZonePak turns a folder of game-data changes and text changes into a S.T.A.L.K.E.R. 2 mod that you can install in
 the game's `~mods` folder or publish on Nexus Mods.
 
@@ -193,8 +197,6 @@ default = true             # optional. true: recommended, ticked in advance, and
 - Plugin mods, which add content such as a ModWorldSubsystem Blueprint as a game feature plugin. Each one needs an
   asset registry file that ZonePak cannot write yet (`AssetRegistry.bin`, whose name table uses CityHash64
   hashes). Text and cfg-only mods do not need one.
-- Publish the pages in `docs/` as the GitHub wiki, so the wiki and the repo never drift apart. The pages are
-  already written as wiki pages, and publishing needs a public repo or a paid plan.
 - Build-time warning for SIDs that other installed mods in `~mods` also patch.
 - Bundle the license notices of the Rust crates compiled into retoc.exe with the release asset.
 
