@@ -234,6 +234,21 @@ class FakeToolsBuildTest(BuildTestBase):
                                         ['DLCGameData/DLC1/ItemPrototypes/ZpTest.cfg',
                                          'GameData/ItemPrototypes/ZpTest.cfg'])])
 
+    def test_default_option_joins_the_main_part_and_empty_option_has_no_pak(self):
+        self.write('cfg/GameData/ItemPrototypes/ZpTest.cfg', PATCH_A)
+        self.write('Barrel/cfg/GameData/UpgradePrototypes/ZpTest_Barrel.cfg', PATCH_B)
+        self.write('Late/cfg/GameData/UpgradePrototypes/ZpTest_Late.cfg', PATCH_B)
+        self.write('zonepak.toml', (self.root / 'zonepak.toml').read_text(encoding='utf-8')
+                   + '[[option]]\nname = "Barrel"\nfolder = "Barrel"\ndefault = true\n\n'
+                     '[[option]]\nname = "Late"\nfolder = "Late"\n\n'
+                     '[[option]]\nname = "Plain"\nfolder = "Plain"\nempty = true\n')
+        flat = self.build()
+        self.assertEqual([name for name, _, _ in self.packed], [
+            'ZpTestStalker2-Windows-OverrideContent.pak', 'ZpTest_BarrelStalker2-Windows-OverrideContent.pak',
+            'ZpTest_LateStalker2-Windows-OverrideContent.pak'])
+        self.assertEqual(sorted(p.name for p in flat.iterdir()), ['ZpTestStalker2-Windows-OverrideContent.pak',
+                                                                  'ZpTest_BarrelStalker2-Windows-OverrideContent.pak'])
+
     def test_rebuild_replaces_the_previous_build(self):
         self.write('cfg/GameData/ItemPrototypes/ZpTest.cfg', PATCH_A)
         self.build()
