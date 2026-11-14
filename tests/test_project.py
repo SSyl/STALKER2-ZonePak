@@ -101,6 +101,17 @@ class OptionFieldTest(unittest.TestCase):
         self.assertEqual(project.options[0].cfg_dir, project.root / 'Opt_1' / 'cfg')
         self.assertEqual([o.empty for o in project.options], [False, False])
 
+    def test_options_folder(self):
+        project = self.load_with('options_folder = "options"\n\n[[option]]\nname = "A"\nfolder = "Opt"\n')
+        self.assertEqual(project.options[0].folder, 'Opt')
+        self.assertEqual(project.options[0].cfg_dir, project.root / 'options' / 'Opt' / 'cfg')
+
+    def test_bad_options_folder(self):
+        for value in ('"cfg"', '"a/b"', '3'):
+            with self.subTest(value=value), \
+                    self.assertRaisesRegex(ProjectError, 'options_folder must be a folder name'):
+                self.load_with(f'options_folder = {value}\n')
+
     def test_empty_option(self):
         project = self.load_with('[[option]]\nname = "A"\nfolder = "Opt"\nempty = true\n', [])
         self.assertTrue(project.options[0].empty)

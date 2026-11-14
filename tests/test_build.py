@@ -155,6 +155,20 @@ class RunCheckTest(BuildTestBase):
             'Opt/cfg/GameData/ItemPrototypes/options.cfg:0: warning: has the same game path as '
             'GameData/ItemPrototypes/Options.cfg, so the game loads only one of them'])
 
+    def test_findings_name_the_options_folder(self):
+        kit = Path(self.tmp.name) / 'kit'
+        (kit / build.KIT_GAME_DATA).mkdir(parents=True)
+        config = Config(zone_kit=kit, game=Path(self.tmp.name) / 'game', repak=Path('repak.exe'))
+        self.write('zonepak.toml', (self.root / 'zonepak.toml').read_text(encoding='utf-8')
+                   + 'options_folder = "options"\n[[option]]\nname = "A"\nfolder = "Opt"\n')
+        self.write('cfg/GameData/ItemPrototypes/Options.cfg', PATCH_B)
+        self.write('options/Opt/cfg/GameData/ItemPrototypes/options.cfg', PATCH_B)
+        with mock.patch('zonepak.tools.pak_list', lambda repak, pak: []):
+            findings = build.run_check(load_project(self.root), config)
+        self.assertEqual([str(f) for f in findings if f.level == 'warning'], [
+            'options/Opt/cfg/GameData/ItemPrototypes/options.cfg:0: warning: has the same game path as '
+            'GameData/ItemPrototypes/Options.cfg, so the game loads only one of them'])
+
 
 class FailedBuildTest(BuildTestBase):
     def test_failed_build_keeps_the_previous_build(self):

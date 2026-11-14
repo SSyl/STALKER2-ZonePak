@@ -17,7 +17,7 @@ NAME_RE = re.compile(r'[A-Za-z0-9_]+')
 # build() writes the mod to build/<name>/ next to its own build/stage/.
 RESERVED_NAMES = ('stage',)
 PROJECT_KEYS = ('name', 'friendly_name', 'description', 'version', 'database_id', 'author', 'website', 'nexus_id',
-                'fill_game_text', 'copy_new_text', 'group', 'option')
+                'fill_game_text', 'copy_new_text', 'options_folder', 'group', 'option')
 GROUP_KEYS = ('name', 'select')
 # FOMOD group types: "any" lets the player tick any number of options, "one" exactly one.
 GROUP_SELECT = {'any': 'SelectAny', 'one': 'SelectExactlyOne'}
@@ -160,8 +160,13 @@ def load_project(root: Path) -> Project:
     copy_new_text = data.get('copy_new_text', '')
     if copy_new_text != '' and copy_new_text not in CULTURES:
         raise ProjectError(f'{path}: copy_new_text must be a culture in quotes, one of {", ".join(CULTURES)}')
+    options_folder = data.get('options_folder', '')
+    if options_folder != '' and (not isinstance(options_folder, str) or not NAME_RE.fullmatch(options_folder)
+                                 or options_folder.lower() in RESERVED_FOLDERS):
+        raise ProjectError(f'{path}: options_folder must be a folder name of letters, digits and underscores, in '
+                           'quotes. cfg, text, build, Main and fomod, in any case, are taken')
     groups = _load_groups(path, data.get('group', []))
-    options = _load_options(root, path, data.get('option', []), groups)
+    options = _load_options(root, path, data.get('option', []), groups, root / options_folder)
     for group in groups:
         members = [o for o in options if o.group == group.name]
         if not members:
@@ -199,7 +204,10 @@ def _load_groups(path: Path, tables) -> tuple[Group, ...]:
     return tuple(groups)
 
 
-def _load_options(root: Path, path: Path, tables, groups: tuple[Group, ...] = ()) -> tuple[Option, ...]:
+def _load_options(root: Path, path: Path, tables, groups: tuple[Group, ...] = (),
+                  base: Path | None = None) -> tuple[Option, ...]:
+    """base is the folder the option folders sit in, the project root unless options_folder names one."""
+    base = base or root
     if not isinstance(tables, list) or not all(isinstance(t, dict) for t in tables):
         raise ProjectError(f'{path}: write each option as a table that starts with [[option]]')
     options: list[Option] = []
@@ -242,10 +250,11 @@ def _load_options(root: Path, path: Path, tables, groups: tuple[Group, ...] = ()
             if image and other.image and other.image.name.lower() == image.name.lower() and other.image != image:
                 raise ProjectError(f'{where}: image file name {image.name} is already used by the image of option '
                                    f'{other_number}. Rename one of the two files')
-        if (root / folder / 'text').exists():
-            raise ProjectError(f'{where}: options are cfg-only, so {folder}/text/ is not allowed. Put text in the '
+        if (base / folder / 'text').exists():
+            shown = (base / folder).relative_to(root).as_posix()
+            raise ProjectError(f'{where}: options are cfg-only, so {shown}/text/ is not allowed. Put text in the '
                                "main part's text/ folder")
-        options.append(Option(root / folder, name.strip(), folder, description.strip(), image, default, group, empty))
+        options.append(Option(base / folder, name.strip(), folder, description.strip(), image, default, group, empty))
     return tuple(options)
 
 

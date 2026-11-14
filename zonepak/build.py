@@ -40,15 +40,15 @@ def run_check(project: Project, config: Config) -> list[Finding]:
         findings.append(Finding('error', f'text/{e.file}', 0, e.message))
     findings += _text_findings(project, entries, config)
     for option, found in zip(project.options, option_findings):
-        prefix = f'{option.folder}/cfg/'
+        prefix = _option_cfg(project, option) + '/'
         findings += [replace(f, file=prefix + f.file) for f in found]
         has_patches = bool(_patch_files(option.cfg_dir))
         if option.empty and has_patches:
-            findings.append(Finding('error', f'{option.folder}/cfg', 0,
+            findings.append(Finding('error', _option_cfg(project, option), 0,
                                     'the option has empty = true, so build leaves out its patch files. Remove '
                                     'empty = true, or the files'))
         elif not option.empty and not has_patches:
-            findings.append(Finding('error', f'{option.folder}/cfg', 0,
+            findings.append(Finding('error', _option_cfg(project, option), 0,
                                     f'no patch files under {prefix}GameData/ or {prefix}DLCGameData/<DLC>/, so the '
                                     'option installs nothing. Add empty = true if that is intended'))
     return findings + _same_game_paths(project)
@@ -94,10 +94,15 @@ def _text_findings(project: Project, entries: dict[str, dict[str, str]], config:
     return findings
 
 
+def _option_cfg(project: Project, option) -> str:
+    """The option's cfg/ folder as findings name it, relative to the project."""
+    return (option.cfg_dir).relative_to(project.root).as_posix()
+
+
 def _same_game_paths(project: Project) -> list[Finding]:
     findings: list[Finding] = []
     first: dict[str, str] = {}
-    parts = [('', project.cfg_dir)] + [(f'{option.folder}/cfg/', option.cfg_dir) for option in project.options]
+    parts = [('', project.cfg_dir)] + [(_option_cfg(project, option) + '/', option.cfg_dir) for option in project.options]
     for prefix, cfg_dir in parts:
         for rel, _ in _patch_files(cfg_dir):
             file = prefix + rel

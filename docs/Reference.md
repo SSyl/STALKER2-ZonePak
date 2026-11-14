@@ -36,6 +36,7 @@ command. [Text keys](Finding-SIDs-And-Text-Keys.md#text-keys) shows its output.
 | `nexus_id` | Optional. The Nexus mod number, the number at the end of the mod's Nexus page address (`.../mods/<number>`). A whole number without quotes, as in `nexus_id = 164`. Recorded in `build.json` when set, and in `fomod/info.xml` as `Id` for a mod with options. |
 | `fill_game_text` | Optional. `true` or `false` without quotes, default `false`. For text keys the game has, copies the game's own text into the cultures the text files leave out. The game shows that text there anyway. See [Cultures you leave out](Text-Overrides.md#cultures-you-leave-out). |
 | `copy_new_text` | Optional. A culture in quotes, such as `"en"`. For text keys the game does not have, copies that culture's text into the cultures the text files leave out. Off by default. |
+| `options_folder` | Optional. A folder name of letters, digits and underscores, in quotes, such as `"options"`. When set, the option folders sit inside it instead of directly in the project folder, as in `options/Fora/cfg/`. Not `cfg`, `text`, `build`, `Main` or `fomod`, in any case. |
 | `[[group]]` | Optional, repeatable. One table per group of options, after the fields above. See the group table below. |
 | `[[option]]` | Optional, repeatable. One table per option, after the fields above. See the option table below. |
 
@@ -51,7 +52,7 @@ Each `[[option]]` table takes these fields. [Optional parts and FOMOD](Optional-
 | Field | Meaning |
 |---|---|
 | `name` | Required. Text in quotes. The option's label in the install wizard. |
-| `folder` | Required. Letters, digits and underscores. The project folder that holds the option's `cfg/GameData/` or `cfg/DLCGameData/<DLC>/`, and the option's folder in the zip. Not `cfg`, `text`, `build`, `Main` or `fomod`, in any case, and unique among the options. |
+| `folder` | Required. Letters, digits and underscores. The folder, in the project folder or in `options_folder` when that is set, that holds the option's `cfg/GameData/` or `cfg/DLCGameData/<DLC>/`, and the option's folder in the zip. Not `cfg`, `text`, `build`, `Main` or `fomod`, in any case, and unique among the options. |
 | `description` | Optional. Text in quotes, shown in the wizard. |
 | `image` | Optional. The path of a `.png` or `.jpg` file inside the project, from the project folder, such as `"fomod/fora.png"`. Shown in the wizard. |
 | `default` | Optional. `true` or `false`, without quotes. Defaults to `false`. `true` makes the option recommended and ticked in advance, and puts its pak in `build/<Name>/`. |
