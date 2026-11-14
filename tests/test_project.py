@@ -9,8 +9,8 @@ class ByteOrderMarkTest(unittest.TestCase):
     def test_config_and_project_files_accept_a_bom(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / 'config.toml'
-            config.write_text("game = 'C:\Game'\n", encoding='utf-8-sig')
-            self.assertEqual(load_config(config).game, Path('C:\Game'))
+            config.write_text("game = 'C:\\Game'\n", encoding='utf-8-sig')
+            self.assertEqual(load_config(config).game, Path('C:\\Game'))
             root = new_project(Path(tmp), 'ZpTest', now=lambda: 1700000000)
             project_file = root / 'zonepak.toml'
             project_file.write_text(project_file.read_text(encoding='utf-8'), encoding='utf-8-sig')
@@ -40,6 +40,20 @@ class HintTest(unittest.TestCase):
             self.assertNotIn('--zone-kit', str(library.exception))
             with self.assertRaisesRegex(ProjectError, r'or pass --zone-kit\.'):
                 Config(source=path, cli=True).require('zone_kit')
+
+
+class ConfigFileTest(unittest.TestCase):
+    def test_named_config_file_must_exist(self):
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaisesRegex(ProjectError, r'config\.toml not found$'):
+            load_config(Path(tmp) / 'config.toml')
+
+    def test_values_must_be_path_strings(self):
+        for line in ('game = 3', "game = ''"):
+            with tempfile.TemporaryDirectory() as tmp, self.subTest(line):
+                path = Path(tmp) / 'config.toml'
+                path.write_text(line + '\n', encoding='utf-8')
+                with self.assertRaisesRegex(ProjectError, r'config\.toml: game must be a path string$'):
+                    load_config(path)
 
 
 class ManifestFieldTest(unittest.TestCase):
@@ -77,6 +91,32 @@ class ManifestFieldTest(unittest.TestCase):
         for line in ('nexus_id = "164"', 'nexus_id = 1.5', 'nexus_id = true', 'nexus_id = 0'):
             with self.subTest(line), self.assertRaisesRegex(ProjectError,
                                                             r'zonepak\.toml: nexus_id must be a whole number'):
+                self.load_with(line)
+
+    def test_database_id_is_ten_digits(self):
+        self.assertEqual(self.load_with('database_id = "0123456789"').database_id, '0123456789')
+        for line in ('database_id = "170000000"', 'database_id = "17000000000"', 'database_id = "170000000x"'):
+            with self.subTest(line), self.assertRaisesRegex(ProjectError,
+                                                            r'zonepak\.toml: database_id must be 10 digits'):
+                self.load_with(line)
+
+    def test_name_rule(self):
+        for line, message in (('name = "Zp-Test"', r"mod name 'Zp-Test' must use only letters, digits and underscores"),
+                              ('name = "Stage"', r"mod name 'Stage' is reserved, because ZonePak uses build/stage/")):
+            with self.subTest(line), self.assertRaisesRegex(ProjectError, message):
+                self.load_with(line)
+
+    def test_unknown_key(self):
+        with self.assertRaisesRegex(ProjectError, r'zonepak\.toml: unknown keys fill_game_txt$'):
+            self.load_with('fill_game_txt = true')
+
+    def test_text_settings(self):
+        project = self.load_with('fill_game_text = true')
+        self.assertTrue(project.fill_game_text)
+        self.assertEqual(self.load_with('copy_new_text = "de"').copy_new_text, 'de')
+        for line, message in (('fill_game_text = "true"', 'fill_game_text must be true or false, without quotes'),
+                              ('copy_new_text = "german"', 'copy_new_text must be a culture in quotes, one of ar, ')):
+            with self.subTest(line), self.assertRaisesRegex(ProjectError, r'zonepak\.toml: ' + message):
                 self.load_with(line)
 
 
@@ -141,6 +181,13 @@ class OptionFieldTest(unittest.TestCase):
         for options, files, message in cases:
             with self.subTest(message), self.assertRaisesRegex(ProjectError, r'zonepak\.toml: ' + message):
                 self.load_with(options, files)
+
+    def test_absolute_image_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            image = Path(tmp) / 'a.png'
+            image.write_bytes(b'')
+            with self.assertRaisesRegex(ProjectError, r'option 1: image must be a path inside the project folder'):
+                self.load_with(f"[[option]]\nname = \"A\"\nfolder = \"Opt\"\nimage = '{image.as_posix()}'\n")
 
     def test_valid_groups(self):
         project = self.load_with('[[group]]\nname = "Pricing"\nselect = "one"\n\n'
