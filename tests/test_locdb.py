@@ -13,11 +13,67 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def read_body(data: bytes) -> list[tuple[str, list[tuple[int, str]]]]:
+    """An FString's length includes its terminator, and counts bytes when positive or UTF-16 code units when
+    negative."""
+    pos = 0
+
+    def unpack(fmt):
+        nonlocal pos
+        values = struct.unpack_from(fmt, data, pos)
+        pos += struct.calcsize(fmt)
+        return values
+
+    def fstring():
+        nonlocal pos
+        (length,) = unpack('<i')
+        size = length if length >= 0 else -2 * length
+        raw, pos = data[pos:pos + size], pos + size
+        return raw[:-1].decode('ascii') if length > 0 else raw[:-2].decode('utf-16-le')
+
+    _, _, count = unpack('<Hii')
+    out = []
+    for _ in range(count):
+        key = fstring()
+        _, _, texts = unpack('<Hii')
+        out.append((key, [(unpack('<II')[0], fstring()) for _ in range(texts)]))
+    if data[pos:] != bytes(4):
+        raise ValueError(f'{len(data) - pos} bytes after the last entry')
+    return out
+
+
 class ExportBodyTest(unittest.TestCase):
     def test_matches_reference(self):
         self.assertEqual(sha(locdb.export_body(ENTRIES)),
                          '134371ce8e673fc401fb4cfd3b860436154a62043f2db1bc200c28488f900f3a')
 
+    def test_non_ascii_text_and_order(self):
+        entries = {'zp_b': {'uk': 'Привіт', 'en': 'Hi'}, 'zp_a': {'zh-Hans': '你好😀'}}
+        self.assertEqual(read_body(locdb.export_body(entries)), [
+            ('zp_a', [(locdb.CULTURES.index('zh-Hans'), '你好😀')]),
+            ('zp_b', [(locdb.CULTURES.index('en'), 'Hi'), (locdb.CULTURES.index('uk'), 'Привіт')])])
+
+
+class FillCulturesTest(unittest.TestCase):
+    GAME = {'en': {'sid_a': 'A', 'sid_b': 'B'}, 'de': {'sid_a': 'A de'}}
+    ENTRIES = {'sid_a': {'en': 'A [Zp]'}, 'sid_b': {'ru': 'B ru'}, 'zp_new': {'en': 'New'}}
+
+    def fill(self, fill_game_text, copy_new_text):
+        return locdb.fill_cultures(self.ENTRIES, lambda culture: self.GAME.get(culture, {}), fill_game_text,
+                                   copy_new_text)
+
+    def test_game_text_fills_game_keys(self):
+        filled, from_game, copied = self.fill(True, '')
+        self.assertEqual((filled['sid_a']['en'], filled['sid_a']['de'], filled['sid_a']['fr']), ('A [Zp]', 'A de', 'A'))
+        self.assertEqual((filled['sid_b']['en'], filled['sid_b']['ru']), ('B', 'B ru'))
+        self.assertEqual(filled['zp_new'], {'en': 'New'})
+        self.assertEqual((from_game, copied), (2 * (len(locdb.CULTURES) - 1), 0))
+
+    def test_copy_new_text_fills_only_new_keys(self):
+        filled, from_game, copied = self.fill(False, 'en')
+        self.assertEqual(filled['sid_a'], {'en': 'A [Zp]'})
+        self.assertEqual(filled['zp_new'], {culture: 'New' for culture in locdb.CULTURES})
+        self.assertEqual((from_game, copied), (0, len(locdb.CULTURES) - 1))
 
 
 class LoadTextTest(unittest.TestCase):
@@ -28,8 +84,15 @@ class LoadTextTest(unittest.TestCase):
             (d / 'de.toml').write_text('sid_items_Bandage_name = "Verband [Test]"\n', encoding='utf-8')
             self.assertEqual(locdb.load_text(d), ENTRIES)
             (d / 'xx.toml').write_text('a = "b"\n', encoding='utf-8')
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(locdb.TextError, r"^xx\.toml: unknown culture 'xx'\. Use one of: ar, "):
                 locdb.load_text(d)
+
+    def test_dotted_key_must_be_quoted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'en.toml').write_text('sid.items = "Bandage"\n', encoding='utf-8')
+            with self.assertRaisesRegex(locdb.TextError, r'^en\.toml: sid must be a string\. Quote keys that contain '
+                                                         r'dots\.$'):
+                locdb.load_text(Path(tmp))
 
 
 
