@@ -51,7 +51,11 @@ class EnsureTest(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in self.third_party.iterdir()), ['repak.exe'])
 
     def test_other_answers_ask_again(self):
-        self.ensure(['', 'maybe', 'Y'])
+        answers = ['', 'maybe', 'Y']
+        asked = []
+        fetch.ensure('repak', ask=lambda question: asked.append(question) or answers[len(asked) - 1],
+                     interactive=True, fetch=lambda url: self.data)
+        self.assertEqual(len(asked), 3)
         self.assertTrue((self.third_party / 'repak.exe').is_file())
 
     def test_no_opens_the_release_page_and_explains(self):
@@ -68,6 +72,11 @@ class EnsureTest(unittest.TestCase):
     def test_without_a_terminal_it_explains_instead_of_asking(self):
         with self.assertRaisesRegex(fetch.FetchError, 'repak is not set'):
             fetch.ensure('repak', ask=lambda question: self.fail('asked'), interactive=False)
+
+    def test_stdin_that_is_not_a_terminal_counts_as_no_terminal(self):
+        with mock.patch.object(fetch.sys, 'stdin', mock.Mock(isatty=lambda: False)), \
+                self.assertRaisesRegex(fetch.FetchError, 'repak is not set'):
+            fetch.ensure('repak', ask=lambda question: self.fail('asked'))
 
     def test_end_of_input_explains_instead_of_crashing(self):
         def ask(question):
@@ -89,7 +98,8 @@ class RequireTest(unittest.TestCase):
     def test_missing_tool_goes_through_fetch(self):
         with mock.patch.object(fetch, 'ensure', return_value=Path('third_party/repak.exe')) as ensure:
             self.assertEqual(Config().require('repak'), Path('third_party/repak.exe'))
-        ensure.assert_called_once_with('repak', cli=False)
+            Config(cli=True).require('repak')
+        self.assertEqual(ensure.call_args_list, [mock.call('repak', cli=False), mock.call('repak', cli=True)])
 
     def test_manual_steps_suggest_the_flag_only_on_the_command_line(self):
         self.assertNotIn('--repak', fetch.manual_steps('repak'))
