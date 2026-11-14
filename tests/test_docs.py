@@ -5,6 +5,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 REPO_URL = re.compile(r'https://github\.com/SSyl/STALKER2-ZonePak/(?:blob|tree)/main/([^#]*)')
+WIKI_URL = re.compile(r'https://github\.com/SSyl/STALKER2-ZonePak/wiki(?:/([^#]*))?')
 LINK = re.compile(r'\]\(<?([^)>\s]+)>?\)')
 CODE_SPAN = re.compile(r'(`+).+?\1')
 
@@ -51,10 +52,13 @@ class DocLinkTest(unittest.TestCase):
                 if text.count('](') != len(targets):
                     broken.append(f'{doc.name}: unparsed link in {line.strip()!r}')
                 for target in targets:
-                    repo_url = REPO_URL.match(target)
+                    repo_url, wiki_url = REPO_URL.match(target), WIKI_URL.match(target)
                     if repo_url:
                         target = repo_url.group(1) + target[repo_url.end():]
                         base = REPO
+                    elif wiki_url:
+                        target = f'{wiki_url.group(1) or "Home"}.md' + target[wiki_url.end():]
+                        base = REPO / 'docs'
                     elif re.match(r'[a-z]+:', target):
                         continue
                     else:
@@ -62,7 +66,11 @@ class DocLinkTest(unittest.TestCase):
                     path_part, _, anchor = target.partition('#')
                     linked = Path(os.path.normpath(base / path_part)) if path_part else doc
                     path = linked.resolve()
-                    if not path.exists():
+                    # .github/workflows/sync-wiki.yml copies only docs/*.md to the wiki.
+                    if (base == REPO / 'docs' and path_part
+                            and (path.parent != (REPO / 'docs').resolve() or path.suffix != '.md')):
+                        broken.append(f'{doc.name}: {target} (not a docs/*.md page, so the wiki has no copy)')
+                    elif not path.exists():
                         broken.append(f'{doc.name}: {target} (no such file)')
                     elif wrong_case(linked, path):
                         on_disk = path.relative_to(REPO).as_posix()
