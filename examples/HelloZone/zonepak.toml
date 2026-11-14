@@ -1,0 +1,5 @@
+name = "HelloZone"
+friendly_name = "Hello Zone"
+description = "ZonePak example: a 10-round PM magazine and a renamed Bandage"
+version = "1.0"
+database_id = "1793990000"

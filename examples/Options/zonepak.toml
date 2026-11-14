@@ -1,0 +1,16 @@
+name = "Options"
+friendly_name = "Options Example"
+description = "ZonePak example: a main patch and two optional parts, installed through a FOMOD"
+version = "1.0"
+database_id = "1793990004"
+
+[[option]]
+name = "Fora-221: 40-round magazine"
+folder = "Fora"
+description = "The Fora-221's standard magazine holds 40 rounds instead of 30."
+default = true
+
+[[option]]
+name = "Lighter canned food"
+folder = "LightFood"
+description = "Canned food weighs 0.05 kg instead of 0.2 kg."

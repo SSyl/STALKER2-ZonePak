@@ -1,0 +1,5 @@
+name = "SteadyBarrel"
+friendly_name = "Steady Barrel"
+description = "ZonePak example: the PM's first barrel upgrade adds 25% magazine capacity"
+version = "1.0"
+database_id = "1793990001"

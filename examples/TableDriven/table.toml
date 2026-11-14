@@ -1,0 +1,11 @@
+# Magazine SID = MaxAmmo. Vanilla: GunAK74_MagDefault 30, GunM10_MagDefault 30, GunKora_MagDefault 7.
+[magazines]
+GunAK74_MagDefault = 40
+GunM10_MagDefault = 32
+GunKora_MagDefault = 8
+
+# Item SID = English name, written to text/en.toml as sid_items_<SID>_name.
+[names]
+Medkit = "Medkit [TableDriven]"
+Bread = "Bread [TableDriven]"
+Vodka = "Cossacks Vodka [TableDriven]"

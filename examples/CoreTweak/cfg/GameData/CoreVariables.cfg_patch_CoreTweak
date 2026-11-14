@@ -1,0 +1,3 @@
+DefaultConfig : struct.begin {bpatch}
+   BinocularsMagnificationMultiplier = 2.0
+struct.end

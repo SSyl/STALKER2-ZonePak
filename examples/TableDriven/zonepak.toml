@@ -1,0 +1,5 @@
+name = "TableDriven"
+friendly_name = "Table Driven"
+description = "ZonePak example: patch and text files generated from table.toml"
+version = "1.0"
+database_id = "1793990003"

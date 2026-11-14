@@ -1,0 +1,4 @@
+*.patch -text
+examples/**/*.cfg -text
+examples/**/*.cfg_patch_* -text
+examples/**/text/*.toml -text
