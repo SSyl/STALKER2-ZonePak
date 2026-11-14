@@ -28,6 +28,29 @@ class SchemaTest(unittest.TestCase):
         self.assertTrue(schema.validate(document), schema.error_log)
 
 
+class XmlTest(unittest.TestCase):
+    def setUp(self):
+        root = Path(tempfile.gettempdir())
+        self.project = Project(root, 'ZpTest', 'Zp Friendly', 'D', '1.2', '1700000000', author='Zp', nexus_id=164,
+                               options=(Option(root / 'A', 'A', 'A'),))
+
+    def test_info_xml_leaves_out_blank_fields(self):
+        info = fomod.info_xml(self.project)
+        self.assertTrue(info.startswith(b'<?xml version="1.0" encoding="utf-8"?>\n'))
+        self.assertEqual([(e.tag, e.text) for e in ET.fromstring(info)], [
+            ('Name', 'Zp Friendly'), ('Author', 'Zp'), ('Version', '1.2'), ('Id', '164'), ('Description', 'D')])
+
+    def test_module_config(self):
+        data = fomod.module_config_xml(self.project)
+        self.assertTrue(data.startswith(b'<?xml version="1.0" encoding="utf-8"?>\n'))
+        config = ET.fromstring(data)
+        self.assertEqual(config.findtext('moduleName'), 'Zp Friendly')
+        group = config.find('installSteps/installStep/optionalFileGroups/group')
+        self.assertEqual(group.find('plugins').get('order'), 'Explicit')
+        self.assertEqual(group.find('plugins/plugin/files/folder').attrib,
+                         {'source': 'A', 'destination': '', 'priority': '0'})
+
+
 class GroupTest(unittest.TestCase):
     def test_groups_become_wizard_groups(self):
         root = Path(tempfile.gettempdir())
