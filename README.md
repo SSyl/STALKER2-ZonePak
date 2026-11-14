@@ -24,8 +24,8 @@ work, and then create a mod of your own. All commands are typed in a Windows com
 
 ### 0. Get ZonePak
 
-Open ZonePak's GitHub page, https://github.com/SSyl/ZonePak, click **Code**, then **Download ZIP**. Extract the zip
-and move the extracted folder, which is named like `ZonePak-main`, to `C:\Tools\ZonePak`, so that
+Open ZonePak's GitHub page, https://github.com/SSyl/STALKER2-ZonePak, click **Code**, then **Download ZIP**. Extract the zip
+and move the extracted folder, which is named like `STALKER2-ZonePak-main`, to `C:\Tools\ZonePak`, so that
 `C:\Tools\ZonePak` holds this `README.md` and the `zonepak` folder. Any other folder works too. These docs call it
 the ZonePak folder.
 

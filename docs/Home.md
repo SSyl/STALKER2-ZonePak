@@ -2,7 +2,7 @@
 
 ZonePak turns a folder of game-data changes and text changes into a S.T.A.L.K.E.R. 2 mod that you can install in
 the game's `~mods` folder or publish on Nexus Mods. The
-[README](https://github.com/SSyl/ZonePak/blob/main/README.md#quick-start) has the quick start, which installs the
+[README](https://github.com/SSyl/STALKER2-ZonePak/blob/main/README.md#quick-start) has the quick start, which installs the
 tools and builds a first mod.
 
 ## Getting started

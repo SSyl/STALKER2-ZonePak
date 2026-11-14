@@ -4,7 +4,7 @@ This page builds the HelloZone example one step at a time, explains each file an
 mod of your own.
 
 All commands run in a command prompt in the ZonePak folder, the folder from step 0 of the README's
-[quick start](https://github.com/SSyl/ZonePak/blob/main/README.md#0-get-zonepak), as
+[quick start](https://github.com/SSyl/STALKER2-ZonePak/blob/main/README.md#0-get-zonepak), as
 `python -m zonepak [global options] <command>`. Global options such as `--project` and `--config` go before the
 command. Always pass `--project`, because the current folder is the ZonePak folder, which is not a mod project. The
 examples assume the config file from the quick start.

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-REPO_URL = re.compile(r'https://github\.com/SSyl/ZonePak/(?:blob|tree)/main/([^#]*)')
+REPO_URL = re.compile(r'https://github\.com/SSyl/STALKER2-ZonePak/(?:blob|tree)/main/([^#]*)')
 LINK = re.compile(r'\]\(<?([^)>\s]+)>?\)')
 CODE_SPAN = re.compile(r'(`+).+?\1')
 

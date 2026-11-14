@@ -1,7 +1,7 @@
 # Examples
 
 This page describes the example projects in the
-[examples folder](https://github.com/SSyl/ZonePak/tree/main/examples) other than HelloZone, which
+[examples folder](https://github.com/SSyl/STALKER2-ZonePak/tree/main/examples) other than HelloZone, which
 [Getting started](Getting-Started.md) covers. They check and build the same way as HelloZone. Each has
 its own fixed `database_id`, because `zonepak.toml` requires one even for a mod without text.
 
