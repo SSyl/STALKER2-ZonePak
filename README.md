@@ -204,7 +204,8 @@ default = true             # optional. true: recommended, ticked in advance, and
   the retoc Zone Kit patch and the Zone Kit container and localization database research.
 - [trumank/repak](https://github.com/trumank/repak) and [trumank/retoc](https://github.com/trumank/retoc), the pak
   and IoStore tools ZonePak runs.
-- [joric/stalker](https://github.com/joric/stalker) for bin2cfg and the wiki on cfg.bin.
+- [joric/stalker](https://github.com/joric/stalker) for `bin2cfg.py`, which ZonePak ships unchanged to decode the
+  game's tables, and the wiki on cfg.bin.
 - [sdwvit/S2CfgToJSON](https://github.com/sdwvit/S2CfgToJSON) for cfg patch semantics and Zone Kit config paths.
 - [DrBAMF-9091/stalker_2_2.0.5_cfg_dump](https://github.com/DrBAMF-9091/stalker_2_2.0.5_cfg_dump) for patch file
   conventions.

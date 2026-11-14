@@ -8,6 +8,8 @@
 - **The retoc Zone Kit patch** and the localization database and container layout ZonePak reimplements, from
   stalker2-worth-per-weight by ThePsyjo, MIT. See `third_party/LICENSE-retoc-zonekit`.
   https://github.com/ThePsyjo/stalker2-worth-per-weight
+- **bin2cfg.py** by joric, Unlicense (public domain). https://github.com/joric/stalker. `zonepak/bin2cfg.py` is its
+  `scripts/bin2cfg.py` at commit `2d3299c`, unchanged.
 - **fomod-schema** by Daniel Nunes, MIT. https://github.com/dh-nunes/fomod-schema. `third_party/fomod-ModuleConfig.xsd`
   is its `ModuleConfig.xsd` at commit `dd86bbe`, unchanged, and only the tests use it. See
   `third_party/LICENSE-fomod-schema`.
