@@ -6,6 +6,8 @@ from pathlib import Path
 from unittest import mock
 
 from zonepak import build, cli
+from zonepak.check import Finding
+from zonepak.project import new_project
 
 GAME_DATA = 'Stalker2/Content/GameLite/GameData/'
 DLC1 = 'Stalker2/Content/GameLite/DLCGameData/DLC1/'
@@ -54,6 +56,24 @@ class TablesCommandTest(unittest.TestCase):
             'Plain cfg files (patch with cfg/DLCGameData/DLC1/<File>.cfg_patch_<any name>):',
             '  NPCNames.cfg',
         ]) + '\n')
+
+
+class CheckCommandTest(unittest.TestCase):
+    def run_check(self, findings: list[Finding]) -> tuple[int, str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = new_project(Path(tmp), 'ZpTest', now=lambda: 1700000000)
+            config = Path(tmp) / 'config.toml'
+            config.write_text('', encoding='utf-8')
+            out = io.StringIO()
+            with mock.patch('zonepak.build.run_check', return_value=findings), contextlib.redirect_stdout(out):
+                code = cli.main(['--config', str(config), '--project', str(root), 'check'])
+            return code, out.getvalue()
+
+    def test_errors_set_the_exit_code(self):
+        warning, error = Finding('warning', 'a.cfg', 1, 'w'), Finding('error', 'a.cfg', 2, 'e')
+        self.assertEqual(self.run_check([warning]), (0, 'a.cfg:1: warning: w\n0 error(s), 1 warning(s)\n'))
+        self.assertEqual(self.run_check([warning, error]),
+                         (1, 'a.cfg:1: warning: w\na.cfg:2: error: e\n1 error(s), 1 warning(s)\n'))
 
 
 class TextSearchTest(unittest.TestCase):
