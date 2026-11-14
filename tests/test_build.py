@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import shutil
@@ -10,6 +11,7 @@ from unittest import mock
 
 from zonepak import build, tools
 from zonepak.project import Config, ProjectError, load_project, new_project
+from zonepak.tables import DLC_GAME_DATA, GAME_DATA
 
 REPAK = os.environ.get('ZONEPAK_TEST_REPAK')
 RETOC = os.environ.get('ZONEPAK_TEST_RETOC')
@@ -180,6 +182,139 @@ class FailedBuildTest(BuildTestBase):
         self.assertEqual((self.root / 'build/ZpTest/ZpTestStalker2-Windows-OverrideContent.pak').read_text(),
                          'previous build')
         self.assertEqual(sorted(p.name for p in self.root.iterdir() if p.name.startswith('build')), ['build'])
+
+
+class FakeToolsBuildTest(BuildTestBase):
+    """Builds with repak and retoc replaced by fakes that record what they were given."""
+
+    def setUp(self):
+        super().setUp()
+        self.config = Config(repak=Path('repak.exe'), retoc=Path('retoc.exe'))
+        self.packed = []
+        self.retoc_redirects = True
+        game = mock.Mock()
+        game.culture.return_value = {}
+        for patch in (mock.patch('zonepak.tools.pak_pack', self.pak_pack),
+                      mock.patch('zonepak.tools.to_zen', self.to_zen),
+                      mock.patch('zonepak.build.game_text', lambda config: game)):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def pak_pack(self, repak, src_dir, mount_point, out_pak):
+        files = sorted(p.relative_to(src_dir).as_posix() for p in src_dir.rglob('*') if p.is_file())
+        self.packed.append((out_pak.name, mount_point, files))
+        out_pak.write_text('\n'.join([mount_point, *files]), encoding='utf-8')
+
+    def to_zen(self, retoc, legacy_dir, out_utoc, mount_point, redirects):
+        out_utoc.write_bytes(b'utoc')
+        out_utoc.with_suffix('.ucas').write_bytes(''.join(redirects).encode() if self.retoc_redirects else b'ucas')
+
+    def build(self):
+        return build.build(load_project(self.root), self.config, findings=[])
+
+    def build_folders(self):
+        return sorted(p.name for p in self.root.iterdir() if p.name.startswith('build'))
+
+    def test_plain_cfg_patch_is_packed(self):
+        self.write('cfg/GameData/CoreVariables.cfg_patch_ZpTest', 'DefaultConfig : struct.begin {bpatch}\r\nstruct.end\r\n')
+        flat = self.build()
+        self.assertEqual(self.packed, [('ZpTestStalker2-Windows-OverrideContent.pak',
+                                        '../../../Stalker2/Content/GameLite/GameData/',
+                                        ['CoreVariables.cfg_patch_ZpTest'])])
+        info = json.loads((self.root / 'build/build.json').read_text(encoding='utf-8'))
+        pak = flat / 'ZpTestStalker2-Windows-OverrideContent.pak'
+        self.assertEqual(info['files'], {pak.name: hashlib.sha256(pak.read_bytes()).hexdigest()})
+
+    def test_base_and_dlc_patches_share_one_pak(self):
+        self.write('cfg/GameData/ItemPrototypes/ZpTest.cfg', PATCH_A)
+        self.write('cfg/DLCGameData/DLC1/ItemPrototypes/ZpTest.cfg', PATCH_B)
+        self.write('cfg/DLCGameData/stray.cfg', PATCH_B)
+        self.build()
+        self.assertEqual(self.packed, [('ZpTestStalker2-Windows-OverrideContent.pak', '../../../Stalker2/Content/GameLite/',
+                                        ['DLCGameData/DLC1/ItemPrototypes/ZpTest.cfg',
+                                         'GameData/ItemPrototypes/ZpTest.cfg'])])
+
+    def test_rebuild_replaces_the_previous_build(self):
+        self.write('cfg/GameData/ItemPrototypes/ZpTest.cfg', PATCH_A)
+        self.build()
+        self.write('cfg/GameData/UpgradePrototypes/ZpTest.cfg', PATCH_B)
+        flat = self.build()
+        self.assertIn('UpgradePrototypes/ZpTest.cfg',
+                      (flat / 'ZpTestStalker2-Windows-OverrideContent.pak').read_text(encoding='utf-8'))
+        self.assertEqual(self.build_folders(), ['build'])
+
+    def test_leftovers_of_an_interrupted_build_are_cleared(self):
+        self.write('cfg/GameData/ItemPrototypes/ZpTest.cfg', PATCH_A)
+        self.write('build.partial/ZpTest/ZpTestStalker2-Windows-OverrideContent.pak', 'interrupted')
+        self.write('build.old/ZpTest/ZpTestStalker2-Windows-OverrideContent.pak', 'interrupted')
+        self.build()
+        self.assertEqual(self.build_folders(), ['build'])
+
+    def test_failed_swap_restores_the_previous_build(self):
+        self.write('cfg/GameData/ItemPrototypes/ZpTest.cfg', PATCH_A)
+        self.write('build/ZpTest/ZpTestStalker2-Windows-OverrideContent.pak', 'previous build')
+        rename = Path.rename
+
+        def rename_fails_for_partial(path, target):
+            if path.name == 'build.partial':
+                raise PermissionError('in use')
+            return rename(path, target)
+
+        with mock.patch.object(Path, 'rename', rename_fails_for_partial), self.assertRaises(PermissionError):
+            self.build()
+        self.assertEqual((self.root / 'build/ZpTest/ZpTestStalker2-Windows-OverrideContent.pak').read_text(),
+                         'previous build')
+
+    def test_empty_project_has_nothing_to_build(self):
+        with self.assertRaisesRegex(build.BuildError, r'^nothing to build: no patch files under cfg/GameData/ or '
+                                                      r'cfg/DLCGameData/ and no text/\*\.toml entries$'):
+            self.build()
+
+    def test_text_only_mod(self):
+        self.write('text/en.toml', 'zp_new_key = "New"\n')
+        flat = self.build()
+        base = 'ZpTestStalker2-Windows-OverrideContent'
+        self.assertEqual(sorted(p.name for p in flat.iterdir()), [f'{base}.pak', f'{base}.ucas', f'{base}.utoc'])
+        info = json.loads((self.root / 'build/build.json').read_text(encoding='utf-8'))
+        self.assertEqual(info['database'], 'Autogenerated_1700000000_LocalizationDatabase')
+
+    def test_retoc_without_package_redirects_is_an_error(self):
+        self.write('text/en.toml', 'zp_new_key = "New"\n')
+        self.retoc_redirects = False
+        with self.assertRaisesRegex(build.BuildError, 'retoc wrote no package redirect'):
+            self.build()
+
+
+class DlcTablesTest(unittest.TestCase):
+    LISTINGS = {'pakchunk0-Windows.pak': [GAME_DATA + 'ItemPrototypes.cfg.bin'],
+                'pakchunk102-Windows.pak': [DLC_GAME_DATA + 'Deluxe/ItemPrototypes.cfg.bin'],
+                'S2_DLC1Stalker2-Windows.pak': [DLC_GAME_DATA + 'DLC1/QuestPrototypes.cfg.bin']}
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        game = Path(self.tmp.name) / 'game'
+        (game / 'DLC1').mkdir(parents=True)
+        (game / 'DLC1' / 'S2_DLC1Stalker2-Windows.pak').write_bytes(b'')
+        (game / build.PAKCHUNK0).parent.mkdir(parents=True)
+        for pak in ('pakchunk0-Windows.pak', 'pakchunk102-Windows.pak'):
+            ((game / build.PAKCHUNK0).parent / pak).write_bytes(b'')
+        self.config = Config(game=game, repak=Path('repak.exe'))
+
+    def tables(self, dlc):
+        with mock.patch('zonepak.tools.pak_list', lambda repak, pak: self.LISTINGS[pak.name]):
+            return build.game_dlc_tables(self.config, dlc)
+
+    def test_dlc_in_the_main_paks(self):
+        self.assertEqual(self.tables('Deluxe').binarized, {'ItemPrototypes'})
+
+    def test_dlc_folder_must_match_the_game_folder_case(self):
+        with self.assertRaisesRegex(ProjectError, "DLC folder 'dlc1' must be spelled DLC1, like the game folder"):
+            self.tables('dlc1')
+
+    def test_unknown_dlc(self):
+        with self.assertRaisesRegex(ProjectError, r'^Nope is not a DLC folder in the game install'):
+            self.tables('Nope')
 
 
 @unittest.skipUnless(REPAK, 'ZONEPAK_TEST_REPAK not set')
