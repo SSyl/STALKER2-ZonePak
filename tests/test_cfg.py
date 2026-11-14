@@ -31,9 +31,20 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(endless[0].children, [cfg.Value('struct.endless', '1', 2)])
 
     def test_unclosed_struct_is_an_error(self):
-        with self.assertRaises(cfg.CfgError):
+        with self.assertRaisesRegex(cfg.CfgError, r'^p\.cfg:1: struct\.begin for A is never closed$'):
             cfg.parse('A : struct.begin\n  X = 1\n', 'p.cfg')
-        cfg.parse('A : struct.begin\n  X = 1\n', 'p.cfg', strict=False)
+        self.assertEqual(cfg.parse('A : struct.begin\n  X = 1\n', 'p.cfg', strict=False),
+                         [cfg.Struct('A', {}, [cfg.Value('X', '1', 2)], 1)])
+
+    def test_stray_struct_end_is_an_error(self):
+        text = 'A : struct.begin\nstruct.end\nstruct.end\n'
+        with self.assertRaisesRegex(cfg.CfgError, r'^p\.cfg:3: struct\.end without a matching struct\.begin$'):
+            cfg.parse(text, 'p.cfg')
+        self.assertEqual(cfg.parse(text, 'p.cfg', strict=False), [cfg.Struct('A', {}, [], 1)])
+
+    def test_find_returns_the_last_duplicate(self):
+        struct, = cfg.parse('A : struct.begin\n  X = 1\n  X = 2\nstruct.end\n')
+        self.assertEqual(struct.find('X'), cfg.Value('X', '2', 3))
 
 
 @unittest.skipUnless(os.environ.get('ZONEPAK_TEST_ZONE_KIT'), 'ZONEPAK_TEST_ZONE_KIT not set')
