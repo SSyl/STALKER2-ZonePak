@@ -48,8 +48,8 @@ class CheckTest(unittest.TestCase):
             f.write_text(text, encoding='utf-8')
         return check_project(self.cfg_root, self.tables, Vanilla(self.game_data, self.tables), dlc_tables)
 
-    def assertFinding(self, findings, level, text):
-        self.assertTrue(any(f.level == level and text in f.message for f in findings), [str(f) for f in findings])
+    def check_mod(self, text: str) -> list[str]:
+        return [str(f) for f in self.run_check({'GameData/ItemPrototypes/Mod.cfg': text})]
 
     def test_valid_nested_patch(self):
         findings = self.run_check({'GameData/ItemPrototypes/Mod.cfg':
@@ -63,21 +63,108 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(findings, [])
 
     def test_missing_sid(self):
-        findings = self.run_check({'GameData/ItemPrototypes/Mod.cfg': 'GunZ : struct.begin {bpatch}\nstruct.end\n'})
-        self.assertFinding(findings, 'error', 'GunZ does not exist in ItemPrototypes. If it is a DLC item, put the '
-                           'patch under cfg/DLCGameData/<DLC>/.')
+        self.assertEqual(self.check_mod('GunZ : struct.begin {bpatch}\nstruct.end\n'), [
+            'GameData/ItemPrototypes/Mod.cfg:1: error: GunZ does not exist in ItemPrototypes. If it is a DLC item, '
+            'put the patch under cfg/DLCGameData/<DLC>/.'])
 
     def test_missing_field(self):
-        findings = self.run_check({'GameData/ItemPrototypes/Mod.cfg':
-                                   'GunA_Mag : struct.begin {bpatch}\n   Weight = 1\nstruct.end\n'})
-        self.assertFinding(findings, 'error', 'GunA_Mag.Weight does not exist in vanilla')
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Weight = 1\nstruct.end\n'),
+                         ['GameData/ItemPrototypes/Mod.cfg:2: error: GunA_Mag.Weight does not exist in vanilla'])
+
+    def test_missing_nested_field(self):
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Magazine : struct.begin {bpatch}\n'
+                                        '      Typo = 12\n   struct.end\nstruct.end\n'),
+                         ['GameData/ItemPrototypes/Mod.cfg:3: error: GunA_Mag.Magazine.Typo does not exist in vanilla'])
+
+    def test_nested_struct_without_bpatch_may_add_fields(self):
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Magazine : struct.begin\n'
+                                        '      MaxAmmo = 12\n      Drum = 1\n   struct.end\nstruct.end\n'), [])
+
+    def test_value_and_struct_shapes_must_match_vanilla(self):
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Cost : struct.begin {bpatch}\n'
+                                        '   struct.end\n   Magazine = 5\nstruct.end\n'), [
+            'GameData/ItemPrototypes/Mod.cfg:2: error: GunA_Mag.Cost is a value in vanilla, not a struct',
+            'GameData/ItemPrototypes/Mod.cfg:4: error: GunA_Mag.Magazine is a struct in vanilla, not a value'])
+
+    def test_index_keys_are_not_checked(self):
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   [0] = 1\n   [1] : struct.begin\n'
+                                        '   struct.end\nstruct.end\n'), [])
+
+    def test_removenode(self):
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Cost : removenode\n'
+                                        '   Weight : removenode\nstruct.end\n'),
+                         ['GameData/ItemPrototypes/Mod.cfg:3: warning: removenode on GunA_Mag.Weight, which does not '
+                          'exist'])
+
+    def test_struct_without_bpatch_replaces_vanilla(self):
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin\n   Cost = 1\nstruct.end\n'), [
+            'GameData/ItemPrototypes/Mod.cfg:1: warning: GunA_Mag has no {bpatch} and replaces the whole vanilla '
+            'struct'])
+
+    def test_bracketed_refkey_is_not_a_sid(self):
+        self.assertEqual(self.check_mod('ZpNew : struct.begin {refkey=[0]}\nstruct.end\n'), [])
+
+    def test_sid_in_two_vanilla_files_is_checked_against_the_closer_match(self):
+        (self.game_data / 'ItemPrototypes').mkdir()
+        (self.game_data / 'ItemPrototypes' / 'Extra.cfg').write_text('GunA_Mag : struct.begin\n   Weight = 1\n'
+                                                                     'struct.end\n', encoding='utf-8')
+        self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Weight = 2\nstruct.end\n'), [])
 
     def test_inherited_nested_struct(self):
-        findings = self.run_check({'GameData/ItemPrototypes/Mod.cfg':
-                                   'GunB_Mag : struct.begin {bpatch}\n   Magazine : struct.begin {bpatch}\n'
-                                   '      MaxAmmo = 3\n   struct.end\nstruct.end\n'})
-        self.assertFinding(findings, 'warning', 'GunB_Mag.Magazine is inherited through refkey')
-        self.assertFalse(any(f.level == 'error' for f in findings))
+        self.assertEqual(self.check_mod('GunB_Mag : struct.begin {bpatch}\n   Magazine : struct.begin {bpatch}\n'
+                                        '      MaxAmmo = 3\n   struct.end\nstruct.end\n'), [
+            'GameData/ItemPrototypes/Mod.cfg:2: warning: GunB_Mag.Magazine is inherited through refkey, not defined '
+            'by GunB_Mag itself. A partial patch can drop the inherited fields.'])
+
+    INHERITED = '''TemplateDrum : struct.begin
+   Magazine : struct.begin
+      MaxAmmo = 0
+      Rounds = 0
+   struct.end
+   Cost = 0
+struct.end
+GunC_Mag : struct.begin {refkey=TemplateDrum}
+   Magazine : struct.begin {bskipref}
+      Rounds = 1
+   struct.end
+struct.end
+GunD_Mag : struct.begin {refkey=TemplateDrum}
+   Cost : removenode
+struct.end
+GunE_Mag : struct.begin {refkey=TemplateDrum}
+   Magazine : struct.begin
+      MaxAmmo = 50
+   struct.end
+struct.end
+'''
+
+    def check_inherited(self, sid: str, body: str) -> list[str]:
+        (self.game_data / 'ItemPrototypes').mkdir()
+        (self.game_data / 'ItemPrototypes' / 'Drums.cfg').write_text(self.INHERITED, encoding='utf-8')
+        return self.check_mod(f'{sid} : struct.begin {{bpatch}}\n{body}struct.end\n')
+
+    def test_bskipref_struct_does_not_inherit(self):
+        self.assertEqual(self.check_inherited('GunC_Mag', '   Magazine : struct.begin {bpatch}\n      MaxAmmo = 1\n'
+                                                          '      Rounds = 2\n   struct.end\n'),
+                         ['GameData/ItemPrototypes/Mod.cfg:3: error: GunC_Mag.Magazine.MaxAmmo does not exist in '
+                          'vanilla'])
+
+    def test_removenode_in_vanilla_drops_the_inherited_field(self):
+        self.assertEqual(self.check_inherited('GunD_Mag', '   Cost = 1\n'),
+                         ['GameData/ItemPrototypes/Mod.cfg:2: error: GunD_Mag.Cost does not exist in vanilla'])
+
+    def test_nested_struct_merges_with_the_inherited_one(self):
+        self.assertEqual(self.check_inherited('GunE_Mag', '   Magazine : struct.begin {bpatch}\n      Rounds = 2\n'
+                                                          '   struct.end\n'), [])
+
+    def test_dlc_structs_do_not_count_for_base_game_refkeys(self):
+        dlc1 = Tables.from_pak_listing([DLC_GAME_DATA + 'DLC1/ItemPrototypes.cfg.bin'], DLC_GAME_DATA + 'DLC1/')
+        findings = self.run_check({'DLCGameData/DLC1/ItemPrototypes/Mod.cfg': 'ZpDlcNew : struct.begin\nstruct.end\n',
+                                   'GameData/ItemPrototypes/Mod.cfg':
+                                   'ZpNew : struct.begin {refkey=ZpDlcNew}\nstruct.end\n'}, {'DLC1': dlc1})
+        self.assertEqual([str(f) for f in findings], [
+            'DLCGameData/DLC1/ItemPrototypes/Mod.cfg:1: warning: ZpDlcNew not checked: the Zone Kit has no DLC1 data',
+            'GameData/ItemPrototypes/Mod.cfg:1: error: refkey ZpDlcNew does not exist in ItemPrototypes'])
 
     def test_unrecognized_line_in_nested_replace(self):
         findings = self.run_check({'GameData/ItemPrototypes/Mod.cfg':
@@ -155,6 +242,19 @@ class CheckTest(unittest.TestCase):
         # 'b' > 'B' case-sensitively, but 'modb' < 'modc' once case is folded.
         findings = self.check_main_and_option('ModC.cfg', 'Modb.cfg', self.SAME_FIELD)
         self.assertEqual(len(findings), 1, findings)
+
+    def test_option_patch_sorting_after_only_once_case_is_folded(self):
+        # 'mod_opt' > 'mod.' once case is folded, but 'MOD' < 'Mod' case-sensitively.
+        findings = self.check_main_and_option('Mod.cfg', 'MOD_Opt.cfg', self.SAME_FIELD)
+        self.assertEqual(len(findings), 1, findings)
+
+    def test_option_replacing_a_struct_the_main_part_patches(self):
+        self.assertEqual(self.check_main_and_option('Mod.cfg', 'Mod-Opt.cfg',
+                                                    'GunA_Mag : struct.begin {bpatch}\n   Magazine : struct.begin\n'
+                                                    '      MaxAmmo = 30\n   struct.end\nstruct.end\n'), [
+            "GameData/ItemPrototypes/Mod-Opt.cfg:2: warning: GunA_Mag.Magazine is also set by the main part's "
+            'Mod.cfg. The game uses the patch file whose name sorts last, so the main part\'s value wins. Give this '
+            'file a name that sorts after Mod.cfg'])
 
     def test_option_patch_sorting_before_main_part_on_other_field(self):
         self.assertEqual(self.check_main_and_option('Mod.cfg', 'Mod-Opt.cfg',
