@@ -2,6 +2,7 @@
 
 **Getting started**
 
+- [Installation](Installation.md)
 - [Getting started](Getting-Started.md)
 - [Terms](Terms.md)
 - [Examples](Examples.md)

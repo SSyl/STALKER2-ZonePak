@@ -8,7 +8,7 @@ installed mod changes nothing in-game.
 | Message | Meaning and fix |
 |---|---|
 | `'python' is not recognized as an internal or external command, operable program or batch file.` | Python is not on PATH in this command prompt. A prompt that was open while Python was installing does not see the new PATH, so first close it and open a new one in the ZonePak folder. If that does not help, type `py` in place of `python`, or reinstall Python with **Add python.exe to PATH** ticked. |
-| `<path>\python.exe: No module named zonepak` | The command prompt is not in the ZonePak folder. Open it there as in step 2 of the README's [quick start](https://github.com/SSyl/STALKER2-ZonePak/blob/main/README.md#2-write-the-config-file), or run `cd /d C:\Tools\ZonePak` with your ZonePak folder first. |
+| `<path>\python.exe: No module named zonepak` | The command prompt is not in the ZonePak folder. Open it there as in step 2 of [Installation](Installation.md#2-write-the-config-file), or run `cd /d C:\Tools\ZonePak` with your ZonePak folder first. |
 | `zonepak: error: unrecognized arguments: --project C:\Mods\MyMod`, after a `usage:` line | A global option came after the command. Put `--project` and the other global options before `check`, `build`, `tables` or `text`, as in `python -m zonepak --project C:\Mods\MyMod check`. |
 
 ## check errors and warnings

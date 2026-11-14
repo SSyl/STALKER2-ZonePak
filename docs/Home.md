@@ -5,12 +5,12 @@
 > documentation and examples updated, they are bound to get outdated from time to time as development continues.
 
 ZonePak turns a folder of game-data changes and text changes into a S.T.A.L.K.E.R. 2 mod that you can install in
-the game's `~mods` folder or publish on Nexus Mods. The
-[README](https://github.com/SSyl/STALKER2-ZonePak/blob/main/README.md#quick-start) has the quick start, which installs the
-tools and builds a first mod.
+the game's `~mods` folder or publish on Nexus Mods. Start with [Installation](Installation.md) to set up the tools
+and config file, then follow [Getting started](Getting-Started.md) to build your first mod.
 
 ## Getting started
 
+- [Installation](Installation.md) downloads ZonePak, installs the required tools and writes `config.toml`.
 - [Getting started](Getting-Started.md) builds the HelloZone example step by step and starts a mod of your own.
 - [Terms](Terms.md) explains SID, binarized table, plain cfg, culture and the other words these pages use.
 - [Examples](Examples.md) describes the other example projects and how to check each one in-game.
