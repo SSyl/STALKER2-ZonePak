@@ -48,10 +48,6 @@ def _check_patch(patch: cfg.Struct, own: cfg.Struct | None, merged: cfg.Struct, 
             own_child = own.find(key) if own is not None else None
             if not isinstance(own_child, cfg.Struct):
                 own_child = None
-            if child.bpatch and own_child is None:
-                findings.append(Finding('warning', file, child.line,
-                                        f'{here} is inherited through refkey, not defined by {sid} itself. '
-                                        'A partial patch can drop the inherited fields.'))
             if child.bpatch:
                 _check_patch(child, own_child, found, here, sid, file, findings)
         elif isinstance(found, cfg.Struct):

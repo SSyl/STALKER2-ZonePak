@@ -110,11 +110,9 @@ class CheckTest(unittest.TestCase):
                                                                      'struct.end\n', encoding='utf-8')
         self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Weight = 2\nstruct.end\n'), [])
 
-    def test_inherited_nested_struct(self):
+    def test_inherited_nested_struct_patches_without_a_warning(self):
         self.assertEqual(self.check_mod('GunB_Mag : struct.begin {bpatch}\n   Magazine : struct.begin {bpatch}\n'
-                                        '      MaxAmmo = 3\n   struct.end\nstruct.end\n'), [
-            'GameData/ItemPrototypes/Mod.cfg:2: warning: GunB_Mag.Magazine is inherited through refkey, not defined '
-            'by GunB_Mag itself. A partial patch can drop the inherited fields.'])
+                                        '      MaxAmmo = 3\n   struct.end\nstruct.end\n'), [])
 
     INHERITED = '''TemplateDrum : struct.begin
    Magazine : struct.begin

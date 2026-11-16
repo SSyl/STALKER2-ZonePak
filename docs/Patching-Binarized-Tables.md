@@ -26,7 +26,9 @@ struct.end
 Run `check`, fix what it reports, then `build` and copy `build\<Name>` into `~mods`. A cfg-only build is one
 `<Name>Stalker2-Windows-OverrideContent.pak`.
 
-If a SID gets a nested struct only through its `refkey` parent, `check` warns that the struct is inherited. For
-example, `GunUDP_MagIncreased` does not define `EffectPrototypeSIDs` itself but gets it from `BigMagTemplate`. A
-partial patch of such a struct can drop the inherited fields, so either list all of them or patch the parent. The
-source for this rule is the comments in the LaserTools mod's `zzz_LaserToolsX_LaserVFX.cfg`.
+A SID that gets a nested struct only through its `refkey` parent is patched the same way. For example,
+`GunUDP_MagIncreased` does not define `EffectPrototypeSIDs` itself but gets it from `BigMagTemplate`. In a test on
+weapon setups, a patch that set only `RecoilRadius` on a setup that inherits `RecoilParams` kept every other inherited
+field, and a patch on the parent setup did not reach the setups that inherit from it. Patch each SID you want to
+change. The LaserTools mod reports the opposite for `LaserSight` in `ItemPrototypes`, where a partial patch on an
+inheriting item dropped the inherited fields, so if a patched struct misbehaves in game, list all of its fields.
