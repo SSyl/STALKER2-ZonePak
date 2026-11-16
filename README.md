@@ -9,7 +9,8 @@ the game's `~mods` folder or publish on Nexus Mods.
 
 It builds mods in the same layouts as GSC's Zone Kit, the official modding kit. Mods with cfg patches need the
 Lesser Zone Kit, which is the Zone Kit's minimal install: the one required component in the Epic Games Launcher's
-install options, about 2.25 GB instead of 700 GB+ for the full kit. Text-only mods do not need the Zone Kit. It
+install options, about 2.25 GB instead of 700 GB+ for the full kit. The full kit works too, and ZonePak detects
+which one `zone_kit` points at. Text-only mods do not need the Zone Kit. It
 checks cfg patches against the vanilla tables, packs cfg-only mods the way the Zone Kit's `PakPlainMod.bat` does,
 and builds text-override mods with a generated localization database.
 

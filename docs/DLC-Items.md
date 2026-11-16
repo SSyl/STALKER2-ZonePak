@@ -27,7 +27,7 @@ such as Customizable Unique Weapons replace `DLCGameData/Deluxe/WeaponGeneralSet
 match no DLC table the same way it does for `GameData`. So `check` and `build` need the DLC installed on the
 machine that builds the mod, even for the mod's base-game patches. Players without the DLC can still use the mod.
 
-The Lesser Zone Kit has no DLC cfg data, so `check` cannot compare a DLC patch with vanilla. It still reports
+Neither the lesser nor the full Zone Kit has DLC cfg data, so `check` cannot compare a DLC patch with vanilla. It still reports
 syntax errors, and warns once for each root struct:
 
 ```

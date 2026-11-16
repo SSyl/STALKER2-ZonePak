@@ -6,9 +6,9 @@ import dataclasses
 import sys
 from pathlib import Path
 
-from . import build, fetch
+from . import build, fetch, zonekit
 from .locdb import CULTURES
-from .project import ProjectError, load_config, load_project, new_project
+from .project import KIT_LEVELS, ProjectError, load_config, load_project, new_project
 from .tables import describe
 from .tools import ToolError
 
@@ -18,6 +18,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument('--project', type=Path, default=Path.cwd(), help='project folder (default: current folder)')
     parser.add_argument('--config', type=Path, help='user config file')
     parser.add_argument('--zone-kit', type=Path, help='Zone Kit install folder')
+    parser.add_argument('--zone-kit-mode', choices=KIT_LEVELS,
+                        help='work as if only this Zone Kit level were installed (default: the level detected)')
     parser.add_argument('--game', type=Path, help='game install folder')
     parser.add_argument('--repak', type=Path, help='repak.exe')
     parser.add_argument('--retoc', type=Path, help='the patched retoc.exe from STALKER2-zonekit-retoc')
@@ -56,8 +58,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == 'new':
             print(f'created {new_project(args.project, args.name)}')
             return 0
-        config = dataclasses.replace(load_config(args.config, {'zone_kit': args.zone_kit, 'game': args.game,
-                                                               'repak': args.repak, 'retoc': args.retoc}), cli=True)
+        overrides = {'zone_kit': args.zone_kit, 'zone_kit_mode': args.zone_kit_mode, 'game': args.game,
+                     'repak': args.repak, 'retoc': args.retoc}
+        config = dataclasses.replace(load_config(args.config, overrides), cli=True)
         if args.command == 'tables':
             if args.dlc:
                 lines = describe(build.game_dlc_tables(config, args.dlc), f'cfg/DLCGameData/{args.dlc}')
@@ -77,6 +80,7 @@ def main(argv: list[str] | None = None) -> int:
                                                 if len(shown) < len(lines) else ''))
             return 0
         project = load_project(args.project)
+        print(zonekit.report(config))
         if args.command == 'check':
             findings = build.run_check(project, config)
             for f in findings:

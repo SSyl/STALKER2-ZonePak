@@ -71,9 +71,10 @@ class CheckCommandTest(unittest.TestCase):
 
     def test_errors_set_the_exit_code(self):
         warning, error = Finding('warning', 'a.cfg', 1, 'w'), Finding('error', 'a.cfg', 2, 'e')
-        self.assertEqual(self.run_check([warning]), (0, 'a.cfg:1: warning: w\n0 error(s), 1 warning(s)\n'))
+        kit = 'Zone Kit: none (zone_kit is not set)\n'
+        self.assertEqual(self.run_check([warning]), (0, kit + 'a.cfg:1: warning: w\n0 error(s), 1 warning(s)\n'))
         self.assertEqual(self.run_check([warning, error]),
-                         (1, 'a.cfg:1: warning: w\na.cfg:2: error: e\n1 error(s), 1 warning(s)\n'))
+                         (1, kit + 'a.cfg:1: warning: w\na.cfg:2: error: e\n1 error(s), 1 warning(s)\n'))
 
 
 class TextSearchTest(unittest.TestCase):

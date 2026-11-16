@@ -29,7 +29,10 @@ RESERVED_FOLDERS = ('cfg', 'text', 'build', 'main', 'fomod')
 IMAGE_SUFFIXES = ('.png', '.jpg')
 # \d would also match full-width and other Unicode digits, which Vortex's version parser rejects.
 VERSION_RE = re.compile(r'[0-9]+(\.[0-9]+){0,2}')
-CONFIG_KEYS = ('zone_kit', 'game', 'repak', 'retoc')
+CONFIG_PATH_KEYS = ('zone_kit', 'game', 'repak', 'retoc')
+CONFIG_KEYS = CONFIG_PATH_KEYS + ('zone_kit_mode',)
+# Lowest first. zone_kit_mode may lower the detected level, never raise it.
+KIT_LEVELS = ('none', 'lesser', 'full')
 # Anything outside XML 1.0's Char production. ElementTree writes these characters unescaped, and the FOMOD files
 # then fail to parse.
 NOT_XML_CHAR = re.compile('[^\t\n\r\u0020-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]')
@@ -291,6 +294,7 @@ class Config:
     game: Path | None = None
     repak: Path | None = None
     retoc: Path | None = None
+    zone_kit_mode: str | None = None
     source: Path | None = None
     # True under ZonePak's own command line, whose flags the messages below may then suggest.
     cli: bool = False
@@ -326,7 +330,10 @@ def load_config(path: Path | None = None, overrides: dict | None = None) -> Conf
     if unknown:
         raise ProjectError(f'{path}: unknown keys {", ".join(sorted(unknown))}')
     for key, value in data.items():
-        if not isinstance(value, str) or not value:
+        if key == 'zone_kit_mode':
+            if value not in KIT_LEVELS:
+                raise ProjectError(f'{path}: zone_kit_mode must be one of {", ".join(KIT_LEVELS)}')
+        elif not isinstance(value, str) or not value:
             raise ProjectError(f'{path}: {key} must be a path string')
     data.update({k: v for k, v in (overrides or {}).items() if v is not None})
-    return Config(**{k: Path(v) for k, v in data.items()}, source=path)
+    return Config(**{k: Path(v) if k in CONFIG_PATH_KEYS else v for k, v in data.items()}, source=path)

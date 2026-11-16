@@ -10,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
-from . import __version__, check, fomod, locdb, locres, tools, uasset
+from . import __version__, check, fomod, locdb, locres, tools, uasset, zonekit
 from .check import Finding
 from .project import Config, Project, ProjectError
 from .tables import DLC_GAME_DATA, PLAIN_PATCH, Tables
@@ -18,7 +18,6 @@ from .vanilla import Vanilla
 
 GAME_LITE = 'Stalker2/Content/GameLite/'
 PAKCHUNK0 = 'Stalker2/Content/Paks/pakchunk0-Windows.pak'
-KIT_GAME_DATA = 'Stalker2/Content/GameLite/GameData'
 
 
 class BuildError(RuntimeError):
@@ -59,9 +58,7 @@ def _has_files(cfg_dir: Path) -> bool:
 
 
 def _check_cfg(cfg_dirs: list[Path], config: Config) -> list[list[Finding]]:
-    game_data = config.require('zone_kit') / KIT_GAME_DATA
-    if not game_data.is_dir():
-        raise ProjectError(f'{game_data} not found. Is zone_kit set to the Zone Kit install folder?')
+    game_data = zonekit.require(config, 'lesser', 'Checking cfg patches') / zonekit.GAME_DATA
     tables = game_tables(config)
     dlcs = sorted({dlc for cfg_dir in cfg_dirs for dlc in _dlc_names(cfg_dir)})
     dlc_tables = {dlc: game_dlc_tables(config, dlc) for dlc in dlcs}

@@ -4,7 +4,7 @@ This page shows where to look up the SIDs, fields and text keys that a patch or 
 
 ## SIDs and fields
 
-The Lesser Zone Kit holds the vanilla GameData as plain-text cfg files under
+The Zone Kit, lesser or full, holds the vanilla GameData as plain-text cfg files under
 `<zone_kit>\Stalker2\Content\GameLite\GameData\`. Open them in any text editor, or search them with `findstr` in a
 command prompt. This command finds where the PM's standard magazine is defined. Use your own `zone_kit` folder
 in the path. GameData holds about 150,000 files, so the search can take several minutes.

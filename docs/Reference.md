@@ -9,7 +9,8 @@ same name.
 
 | Key | Flag | Used by | Value |
 |---|---|---|---|
-| `zone_kit` | `--zone-kit` | `check`, `build` | Zone Kit install folder. Vanilla structs are read from `Stalker2\Content\GameLite\GameData`. Only needed for a mod with files under its `cfg/` folders. |
+| `zone_kit` | `--zone-kit` | `check`, `build` | Zone Kit install folder. Vanilla structs are read from `Stalker2\Content\GameLite\GameData`. Only needed for a mod with files under its `cfg/` folders. `check` and `build` print which Zone Kit they found: `none` when this is unset, `full` when the Zone Kit editor option is installed (`Stalker2\Binaries\Win64\Stalker2ModEditor-Win64-Shipping-Cmd.exe` and `Stalker2\Content\Paks\FullEditor-WindowsModEditor.pak`), and `lesser` otherwise. |
+| `zone_kit_mode` | `--zone-kit-mode` | `check`, `build` | `none`, `lesser` or `full`. Makes ZonePak work as if only that Zone Kit were installed, to see what a modder with a smaller install gets. It can only lower the level ZonePak finds. With `none`, a mod with files under its `cfg/` folders cannot be checked. |
 | `game` | `--game` | `check`, `build`, `tables`, `text` | Game install folder. `tables`, and `check` for a mod with files under its `cfg/` folders, list `Stalker2\Content\Paks\pakchunk0-Windows.pak`. `check`, `build` and `text` read the game's text from that pak when a mod has text, or for `text` always. `check` also lists every `<DLC>\*.pak` for the folders under `cfg/DLCGameData/`, and `tables --dlc <DLC>` lists that DLC's. Deluxe, Ultimate and PreOrder have no folder of their own, so for those it lists the main game paks instead. |
 | `repak` | `--repak` | `check`, `build`, `tables`, `text` | `repak.exe`. When unset, `third_party\repak.exe`, which ZonePak offers to download. |
 | `retoc` | `--retoc` | `build` with text | The patched `retoc.exe`. When unset, `third_party\retoc.exe`, which ZonePak offers to download. |

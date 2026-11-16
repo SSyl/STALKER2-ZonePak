@@ -64,9 +64,11 @@ python -m zonepak --project C:\Mods\HelloZone check
 ```
 
 ```
+Zone Kit: lesser (D:\Games\Epic Games\STALKER2ZoneKit)
 0 error(s), 0 warning(s)
 ```
 
+The first line says which Zone Kit `check` found, `full` instead of `lesser` if yours has the Zone Kit editor.
 `check` reads the table list from the game's `pakchunk0-Windows.pak` and the vanilla structs from the Zone Kit,
 then compares each patch against them. It also reads the `text/*.toml` files and reports the first one that
 `build` would reject. `GunPM_MagDefault` exists in vanilla `ItemPrototypes` with its own `Magazine` struct, so
@@ -120,11 +122,12 @@ English, the Bandage is named `Bandage [HelloZone]`, unless you deleted `text\en
 In your copy, change `MaxAmmo = 10` to `MaxAmo = 10` and run `check` again:
 
 ```
+Zone Kit: lesser (D:\Games\Epic Games\STALKER2ZoneKit)
 GameData/ItemPrototypes/HelloZone.cfg:3: error: GunPM_MagDefault.Magazine.MaxAmo does not exist in vanilla
 1 error(s), 0 warning(s)
 ```
 
-Each line gives the file relative to `cfg/`, the line number, the level and the message. `build` prints the same
+Each finding gives the file relative to `cfg/`, the line number, the level and the message. `build` prints the same
 line, then `error: 1 error(s) in patch or text files`, and leaves the previous build untouched. Fix the typo before
 going on.
 

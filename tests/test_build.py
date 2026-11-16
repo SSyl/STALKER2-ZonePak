@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from unittest import mock
 
-from zonepak import build, tools
+from zonepak import build, tools, zonekit
 from zonepak.project import Config, ProjectError, load_project, new_project
 from zonepak.tables import DLC_GAME_DATA, GAME_DATA
 
@@ -79,7 +79,7 @@ class RunCheckTest(BuildTestBase):
 
     def test_broken_text_file_is_an_error(self):
         kit = Path(self.tmp.name) / 'kit'
-        (kit / build.KIT_GAME_DATA).mkdir(parents=True)
+        (kit / zonekit.GAME_DATA).mkdir(parents=True)
         config = Config(zone_kit=kit, game=Path(self.tmp.name) / 'game', repak=Path('repak.exe'))
         self.write('text/en.toml', 'sid_items_Bandage_name = "no closing quote\n')
         with mock.patch('zonepak.tools.pak_list', lambda repak, pak: []):
@@ -91,7 +91,7 @@ class RunCheckTest(BuildTestBase):
 
     def test_text_left_without_cultures_is_a_warning(self):
         kit = Path(self.tmp.name) / 'kit'
-        (kit / build.KIT_GAME_DATA).mkdir(parents=True)
+        (kit / zonekit.GAME_DATA).mkdir(parents=True)
         config = Config(zone_kit=kit, game=Path(self.tmp.name) / 'game', repak=Path('repak.exe'))
         self.write('text/en.toml', 'sid_items_Bandage_name = "Bandage [Zp]"\nsid_items_Bandaeg_name = "Typo"\n')
         self.write('text/de.toml', 'zp_new_key = "Neu"\n')
@@ -116,7 +116,7 @@ class RunCheckTest(BuildTestBase):
 
     def test_option_findings_name_the_option_folder(self):
         kit = Path(self.tmp.name) / 'kit'
-        (kit / build.KIT_GAME_DATA).mkdir(parents=True)
+        (kit / zonekit.GAME_DATA).mkdir(parents=True)
         config = Config(zone_kit=kit, game=Path(self.tmp.name) / 'game', repak=Path('repak.exe'))
         self.write('zonepak.toml', (self.root / 'zonepak.toml').read_text(encoding='utf-8')
                    + '[[option]]\nname = "A"\nfolder = "Opt"\n\n[[option]]\nname = "B"\nfolder = "Empty"\n')
@@ -131,7 +131,7 @@ class RunCheckTest(BuildTestBase):
 
     def test_empty_option(self):
         kit = Path(self.tmp.name) / 'kit'
-        (kit / build.KIT_GAME_DATA).mkdir(parents=True)
+        (kit / zonekit.GAME_DATA).mkdir(parents=True)
         config = Config(zone_kit=kit, game=Path(self.tmp.name) / 'game', repak=Path('repak.exe'))
         self.write('zonepak.toml', (self.root / 'zonepak.toml').read_text(encoding='utf-8')
                    + '[[option]]\nname = "A"\nfolder = "Std"\nempty = true\n\n'
@@ -145,7 +145,7 @@ class RunCheckTest(BuildTestBase):
 
     def test_same_game_path_in_two_parts_is_a_warning(self):
         kit = Path(self.tmp.name) / 'kit'
-        (kit / build.KIT_GAME_DATA).mkdir(parents=True)
+        (kit / zonekit.GAME_DATA).mkdir(parents=True)
         config = Config(zone_kit=kit, game=Path(self.tmp.name) / 'game', repak=Path('repak.exe'))
         self.write('zonepak.toml', (self.root / 'zonepak.toml').read_text(encoding='utf-8')
                    + '[[option]]\nname = "A"\nfolder = "Opt"\n')
@@ -159,7 +159,7 @@ class RunCheckTest(BuildTestBase):
 
     def test_findings_name_the_options_folder(self):
         kit = Path(self.tmp.name) / 'kit'
-        (kit / build.KIT_GAME_DATA).mkdir(parents=True)
+        (kit / zonekit.GAME_DATA).mkdir(parents=True)
         config = Config(zone_kit=kit, game=Path(self.tmp.name) / 'game', repak=Path('repak.exe'))
         self.write('zonepak.toml', (self.root / 'zonepak.toml').read_text(encoding='utf-8')
                    + 'options_folder = "options"\n[[option]]\nname = "A"\nfolder = "Opt"\n')

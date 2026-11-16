@@ -22,7 +22,8 @@ ZonePak folder.
   Store, so you need a free Epic Games account. When you install the Zone Kit, the Epic Games Launcher shows the
   "S.T.A.L.K.E.R. 2 Zone Kit Installation Options" dialog. Keep "The Lesser Zone kit (Required)" (2.252 GB) ticked,
   and make sure the four optional components, Zone Kit editor, World Map, Pre-renders and Audio via Wwise, are
-  unticked.
+  unticked. If you already have the full Zone Kit with the Zone Kit editor, use that install instead. ZonePak does
+  nothing more with it yet.
 - **`repak.exe` and the patched `retoc.exe`.** You do not need to fetch them yourself. The first time a command needs
   one, ZonePak asks whether to download it into its `third_party` folder. Type `y` to download it. ZonePak checks
   the download against a fixed SHA-256 and extracts only the `.exe`. Type `n` to download it yourself instead.
@@ -55,6 +56,11 @@ game = 'D:\Games\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl'
 
 If you keep `repak.exe` or `retoc.exe` somewhere other than `third_party`, add a `repak` or `retoc` line with its
 path, such as `repak = 'C:\Tools\repak.exe'`.
+
+`check` and `build` start by printing which Zone Kit they found, such as
+`Zone Kit: lesser (D:\Games\Epic Games\STALKER2ZoneKit)`. It reads `none` without a `zone_kit` line, `lesser` for
+the minimal install and `full` when the Zone Kit editor is installed. To see what a modder with a smaller install
+gets, add `zone_kit_mode = 'lesser'` or `zone_kit_mode = 'none'`. It can only lower the level ZonePak finds.
 
 Keep the single quotes. TOML reads single-quoted strings literally and treats backslashes in double-quoted strings
 as escapes.
