@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zonepak.check import check_parts, check_project
+from zonepak.check import Finding, check_parts, check_project, summarize
 from zonepak.tables import DLC_GAME_DATA, Tables
 from zonepak.vanilla import Vanilla
 
@@ -344,6 +344,19 @@ struct.end
         self.assertEqual([str(f) for f in findings], [
             f'{file}:0: warning: not a .cfg or .cfg_patch_ file, so build does not pack it'
             for file in ('GameData/notes.txt', 'readme.md')])
+
+
+class SummarizeTest(unittest.TestCase):
+    def test_a_group_prints_as_one_line_where_its_first_finding_was(self):
+        def grouped(line, sid):
+            return Finding('warning', 'a.cfg', line, f'{sid} not checked', 'not checked', sid)
+        findings = [grouped(1, 'A'), Finding('error', 'a.cfg', 2, 'e'), grouped(3, 'B'), grouped(4, 'C'),
+                    grouped(5, 'D'), grouped(6, 'A')]
+        self.assertEqual(summarize(findings), ['warning: 5 (4 SIDs) not checked: A, B, C and 1 others',
+                                               'a.cfg:2: error: e'])
+
+    def test_a_group_of_one_prints_the_finding(self):
+        self.assertEqual(summarize([Finding('warning', 'a.cfg', 1, 'w', 'g', 'A')]), ['a.cfg:1: warning: w'])
 
 
 if __name__ == '__main__':

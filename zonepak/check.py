@@ -15,9 +15,36 @@ class Finding:
     file: str
     line: int
     message: str
+    # Findings that share a group print as one summary line naming each finding's item.
+    group: str = ''
+    item: str = ''
 
     def __str__(self) -> str:
         return f'{self.file}:{self.line}: {self.level}: {self.message}'
+
+
+GROUP_SHOWN = 3
+
+
+def summarize(findings: list[Finding]) -> list[str]:
+    """The lines to print: each finding, except that a group of two or more prints as one line."""
+    groups: dict[str, list[Finding]] = {}
+    for f in findings:
+        if f.group:
+            groups.setdefault(f.group, []).append(f)
+    lines: list[str] = []
+    for f in findings:
+        members = groups.get(f.group, [])
+        if len(members) < 2:
+            lines.append(str(f))
+        elif members[0] is f:
+            items = list(dict.fromkeys(m.item for m in members))
+            shown = ', '.join(items[:GROUP_SHOWN])
+            if len(items) > GROUP_SHOWN:
+                shown += f' and {len(items) - GROUP_SHOWN} others'
+            count = f'{len(members)}' + (f' ({len(items)} SIDs)' if len(items) != len(members) else '')
+            lines.append(f'{f.level}: {count} {f.group}: {shown}')
+    return lines
 
 
 def _is_index(key: str) -> bool:
@@ -102,7 +129,8 @@ def _check_dlc_file(roots: list, dlc: str, file: str, findings: list[Finding]) -
     for node in roots:
         if isinstance(node, cfg.Struct):
             findings.append(Finding('warning', file, node.line,
-                                    f'{node.name} not checked: the Zone Kit has no {dlc} data'))
+                                    f'{node.name} not checked: the Zone Kit has no {dlc} data',
+                                    f'patches not checked, the Zone Kit has no {dlc} data', node.name))
         elif not isinstance(node, cfg.Unknown):
             findings.append(Finding('warning', file, node.line, 'top-level line outside any struct'))
 
@@ -296,7 +324,9 @@ def _inheritance_findings(roots: list, target: Target, vanilla: Vanilla, patched
             field_text = ', '.join(fields[:3]) + (f' and {len(fields) - 3} more' if len(fields) > 3 else '')
             findings.append(Finding('warning', file, node.line,
                                     f'{len(names)} SID(s) inherit {field_text} from {node.name} through refkey and '
-                                    f'may not get this patch: {shown}. Patch them too if they should change'))
+                                    f'may not get this patch: {shown}. Patch them too if they should change',
+                                    f'patches to {field_text} in {target.table} that SIDs inheriting through refkey '
+                                    'may not get', node.name))
     return findings
 
 

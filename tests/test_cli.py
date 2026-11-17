@@ -59,7 +59,7 @@ class TablesCommandTest(unittest.TestCase):
 
 
 class CheckCommandTest(unittest.TestCase):
-    def run_check(self, findings: list[Finding]) -> tuple[int, str]:
+    def run_check(self, findings: list[Finding], log: list | None = None) -> tuple[int, str]:
         with tempfile.TemporaryDirectory() as tmp:
             root = new_project(Path(tmp), 'ZpTest', now=lambda: 1700000000)
             config = Path(tmp) / 'config.toml'
@@ -67,7 +67,19 @@ class CheckCommandTest(unittest.TestCase):
             out = io.StringIO()
             with mock.patch('zonepak.build.run_check', return_value=findings), contextlib.redirect_stdout(out):
                 code = cli.main(['--config', str(config), '--project', str(root), 'check'])
-            return code, out.getvalue()
+            if log is not None:
+                log.append((root / 'build' / 'check.log').read_text(encoding='utf-8'))
+            return code, out.getvalue().replace(str(root), '<root>')
+
+    def test_grouped_findings_print_one_line_and_all_go_to_the_log(self):
+        findings = [Finding('warning', 'a.cfg', n, f'{sid} not checked', 'not checked', sid)
+                    for n, sid in enumerate('AB', 1)]
+        log: list = []
+        code, out = self.run_check(findings, log)
+        self.assertEqual(out.splitlines()[1:], [
+            'warning: 2 not checked: A, B',
+            f'0 error(s), 2 warning(s). Every finding is in {Path("<root>/build/check.log")}'])
+        self.assertEqual(log, ['a.cfg:1: warning: A not checked\na.cfg:2: warning: B not checked\n'])
 
     def test_errors_set_the_exit_code(self):
         warning, error = Finding('warning', 'a.cfg', 1, 'w'), Finding('error', 'a.cfg', 2, 'e')

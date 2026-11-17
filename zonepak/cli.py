@@ -7,10 +7,18 @@ import sys
 from pathlib import Path
 
 from . import build, fetch, zonekit
+from .check import Finding, summarize
 from .locdb import CULTURES
 from .project import KIT_LEVELS, ProjectError, load_config, load_project, new_project
 from .tables import describe
 from .tools import ToolError
+
+
+def _write_log(project, findings: list[Finding]) -> Path:
+    log = project.build_dir / 'check.log'
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(''.join(f'{f}\n' for f in findings), encoding='utf-8')
+    return log
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -81,17 +89,19 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         project = load_project(args.project)
         print(zonekit.report(config))
-        if args.command == 'check':
-            findings = build.run_check(project, config)
-            for f in findings:
-                print(f)
-            errors = sum(f.level == 'error' for f in findings)
-            print(f'{errors} error(s), {len(findings) - errors} warning(s)')
-            return 1 if errors else 0
         findings = build.run_check(project, config)
-        for f in findings:
-            print(f)
+        lines = summarize(findings)
+        for line in lines:
+            print(line)
+        log = _write_log(project, findings)
+        if args.command == 'check':
+            errors = sum(f.level == 'error' for f in findings)
+            print(f'{errors} error(s), {len(findings) - errors} warning(s)'
+                  + (f'. Every finding is in {log}' if len(lines) < len(findings) else ''))
+            return 1 if errors else 0
         print(f'built {build.build(project, config, findings=findings, report=print)}')
+        # build replaces the whole build folder.
+        _write_log(project, findings)
         return 0
     except (build.BuildError, fetch.FetchError, ProjectError, ToolError, ValueError, OSError) as e:
         print(f'error: {e}', file=sys.stderr)

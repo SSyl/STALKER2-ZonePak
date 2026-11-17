@@ -131,6 +131,11 @@ Each finding gives the file relative to `cfg/`, the line number, the level and t
 line, then `error: 1 error(s) in patch or text files`, and leaves the previous build untouched. Fix the typo before
 going on.
 
+Warnings of the same kind print as one line, such as
+`warning: 41 (30 SIDs) patches not checked, the Zone Kit has no DLC1 data: GunWarszawa_AR, DLC01_azot_0,
+DLC01_gumorok_0 and 27 others`. The count in parentheses appears when some SIDs are patched more than once. Every
+finding, one per line, is in `build\check.log`.
+
 ## Make your own
 
 ```
