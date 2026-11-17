@@ -51,7 +51,7 @@ def _is_index(key: str) -> bool:
     return key.startswith('[') and key.endswith(']')
 
 
-def _check_patch(patch: cfg.Struct, own: cfg.Struct | None, merged: cfg.Struct, path: str, sid: str,
+def _check_patch(patch: cfg.Struct, own: cfg.Struct | None, merged: cfg.Struct, path: str, sid: str, table: str,
                  file: str, findings: list[Finding]) -> None:
     for child in patch.children:
         if isinstance(child, cfg.Unknown):
@@ -75,8 +75,18 @@ def _check_patch(patch: cfg.Struct, own: cfg.Struct | None, merged: cfg.Struct, 
             own_child = own.find(key) if own is not None else None
             if not isinstance(own_child, cfg.Struct):
                 own_child = None
+            if child.bpatch and own is not None and own_child is None:
+                # Only the 2026-11-15 RecoilParams memory scan was measured. The LaserTools comments are the
+                # opposite report, unverified. ZonePak's research/open-questions.md has both.
+                struct = here[len(sid) + 1:]
+                findings.append(Finding('warning', file, child.line,
+                                        f'{here} is inherited through refkey, not defined by {sid} itself, and this '
+                                        'patch sets only part of it. In one weapon setup test the other inherited '
+                                        'fields were kept. Comments in the LaserTools mod report them dropped for an '
+                                        'item, unverified. If this struct misbehaves in game, list all of its fields',
+                                        f'partial patches to inherited {struct} in {table}', sid))
             if child.bpatch:
-                _check_patch(child, own_child, found, here, sid, file, findings)
+                _check_patch(child, own_child, found, here, sid, table, file, findings)
         elif isinstance(found, cfg.Struct):
             findings.append(Finding('error', file, child.line, f'{here} is a struct in vanilla, not a value'))
 
@@ -110,7 +120,8 @@ def _check_file(roots: list, target: Target, vanilla: Vanilla, file: str, define
             best: tuple[tuple[int, int], list[Finding]] | None = None
             for entry in entries:
                 attempt: list[Finding] = []
-                _check_patch(node, entry.node, vanilla.merged(entry), node.name, node.name, file, attempt)
+                _check_patch(node, entry.node, vanilla.merged(entry), node.name, node.name, target.table, file,
+                             attempt)
                 score = (sum(f.level == 'error' for f in attempt), len(attempt))
                 if best is None or score <= best[0]:
                     best = (score, attempt)

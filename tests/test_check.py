@@ -110,9 +110,13 @@ class CheckTest(unittest.TestCase):
                                                                      'struct.end\n', encoding='utf-8')
         self.assertEqual(self.check_mod('GunA_Mag : struct.begin {bpatch}\n   Weight = 2\nstruct.end\n'), [])
 
-    def test_inherited_nested_struct_patches_without_a_warning(self):
-        self.assertEqual(self.check_mod('GunB_Mag : struct.begin {bpatch}\n   Magazine : struct.begin {bpatch}\n'
-                                        '      MaxAmmo = 3\n   struct.end\nstruct.end\n'), [])
+    def test_partial_patch_of_an_inherited_nested_struct(self):
+        findings = self.run_check({'GameData/ItemPrototypes/Mod.cfg':
+                                   'GunB_Mag : struct.begin {bpatch}\n   Magazine : struct.begin {bpatch}\n'
+                                   '      MaxAmmo = 3\n   struct.end\nstruct.end\n'})
+        self.assertEqual([(str(f).split(' is inherited')[0], f.group, f.item) for f in findings],
+                         [('GameData/ItemPrototypes/Mod.cfg:2: warning: GunB_Mag.Magazine',
+                           'partial patches to inherited Magazine in ItemPrototypes', 'GunB_Mag')])
 
     INHERITED = '''TemplateDrum : struct.begin
    Magazine : struct.begin

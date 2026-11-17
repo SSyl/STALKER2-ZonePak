@@ -33,5 +33,5 @@ field. A patch on the parent setup did not reach the setups that inherit from it
 technician's upgrade list in `NPCPrototypes`, so patch each SID you want to change. `check` warns when a patch sets a
 field that other SIDs inherit from the patched one and the mod doesn't patch them too. Comments in the LaserTools
 mod report the opposite of the first result for `LaserSight` in `ItemPrototypes`, where a partial patch on an
-inheriting item is said to have dropped the inherited fields. That is unverified, but if a patched struct misbehaves
-in game, list all of its fields.
+inheriting item is said to have dropped the inherited fields. That is unverified, so `check` also warns about a
+partial patch to an inherited struct. If a patched struct misbehaves in game, list all of its fields.
