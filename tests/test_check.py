@@ -155,6 +155,45 @@ struct.end
         self.assertEqual(self.check_inherited('GunE_Mag', '   Magazine : struct.begin {bpatch}\n      Rounds = 2\n'
                                                           '   struct.end\n'), [])
 
+    def test_parent_patch_names_the_sids_that_inherit_the_field(self):
+        self.assertEqual(self.check_mod('TemplateMag : struct.begin {bpatch}\n   Cost = 1\nstruct.end\n'), [
+            'GameData/ItemPrototypes/Mod.cfg:1: warning: 1 SID(s) inherit Cost from TemplateMag through refkey and may '
+            'not get this patch: GunA_Mag. Patch them too if they should change'])
+
+    def test_parent_patch_of_a_nested_field(self):
+        self.assertEqual(self.check_mod('TemplateMag : struct.begin {bpatch}\n   Magazine : struct.begin {bpatch}\n'
+                                        '      MaxAmmo = 9\n   struct.end\nstruct.end\n'), [
+            'GameData/ItemPrototypes/Mod.cfg:1: warning: 1 SID(s) inherit Magazine.MaxAmmo from TemplateMag through '
+            'refkey and may not get this patch: GunB_Mag. Patch them too if they should change'])
+
+    def test_parent_patch_is_quiet_when_the_inheritors_are_patched_too(self):
+        self.assertEqual(self.check_mod('TemplateMag : struct.begin {bpatch}\n   Cost = 1\nstruct.end\n'
+                                        'GunA_Mag : struct.begin {bpatch}\n   Cost = 1\nstruct.end\n'), [])
+
+    LISTS = '''TemplateTree : struct.begin
+   Upgrades : struct.begin
+      [0] = UpA
+   struct.end
+struct.end
+GunOwnTree : struct.begin {refkey=TemplateTree}
+   Upgrades : struct.begin
+      [0] = UpB
+   struct.end
+struct.end
+GunSameTree : struct.begin {refkey=TemplateTree}
+struct.end
+GunSameTreeUnique : struct.begin {refkey=GunSameTree}
+struct.end
+'''
+
+    def test_list_item_added_to_a_parent(self):
+        (self.game_data / 'ItemPrototypes').mkdir()
+        (self.game_data / 'ItemPrototypes' / 'Trees.cfg').write_text(self.LISTS, encoding='utf-8')
+        self.assertEqual(self.check_mod('TemplateTree : struct.begin {bpatch}\n   Upgrades : struct.begin {bpatch}\n'
+                                        '      [1] = UpNew\n   struct.end\nstruct.end\n'), [
+            'GameData/ItemPrototypes/Mod.cfg:1: warning: 2 SID(s) inherit Upgrades.[1] from TemplateTree through refkey '
+            'and may not get this patch: GunSameTree, GunSameTreeUnique. Patch them too if they should change'])
+
     def test_dlc_structs_do_not_count_for_base_game_refkeys(self):
         dlc1 = Tables.from_pak_listing([DLC_GAME_DATA + 'DLC1/ItemPrototypes.cfg.bin'], DLC_GAME_DATA + 'DLC1/')
         findings = self.run_check({'DLCGameData/DLC1/ItemPrototypes/Mod.cfg': 'ZpDlcNew : struct.begin\nstruct.end\n',

@@ -222,6 +222,84 @@ def _overlap(paths: dict[str, int], others: dict[str, int]) -> tuple[str, int] |
     return None
 
 
+def _child(node: cfg.Struct, key: str):
+    for c in node.children:
+        if (isinstance(c, cfg.Struct) and c.name == key) or (isinstance(c, (cfg.Value, cfg.Remove)) and c.key == key):
+            return c
+    return None
+
+
+def _own_defines(node: cfg.Struct, keys: list[str]) -> bool:
+    """Whether node itself sets the field at keys, removes it, or cuts it off from its parent with {bskipref}. A node
+    that defines a list owns all of it, so an item its parent adds at a new index is not inherited."""
+    if 'bskipref' in node.flags:
+        return True
+    for depth, key in enumerate(keys):
+        found = _child(node, key)
+        if found is None:
+            return False
+        if (depth == len(keys) - 1 or not isinstance(found, cfg.Struct) or 'bskipref' in found.flags
+                or _is_index(keys[depth + 1])):
+            return True
+        node = found
+    return False
+
+
+def _patched_paths(parsed: list[tuple[str, Target, list, str | None]]) -> dict[Target, dict[str, set[str]]]:
+    out: dict[Target, dict[str, set[str]]] = {}
+    for _, target, roots, dlc in parsed:
+        if dlc is None:
+            for node in roots:
+                if isinstance(node, cfg.Struct) and node.bpatch:
+                    out.setdefault(target, {}).setdefault(node.name, set()).update(_set_paths(node.children))
+    return out
+
+
+def _covers(paths: set[str], path: str) -> bool:
+    return any(p == path or path.startswith(f'{p}.') or p.startswith(f'{path}.') for p in paths)
+
+
+INHERITORS_SHOWN = 5
+
+
+def _inheritance_findings(roots: list, target: Target, vanilla: Vanilla, patched: dict[str, set[str]],
+                          file: str) -> list[Finding]:
+    # In game, a patch to a technician's Upgrades list did not reach Screw, who inherits it (2026-11-09), and a
+    # RecoilParams patch on GunAK74_ST did not reach Gun_Combatant_AR_GS (2026-11-15). Both were binarized tables.
+    # Other tables and plain cfg are untested, hence "may not".
+    findings: list[Finding] = []
+    for node in roots:
+        if not (isinstance(node, cfg.Struct) and node.bpatch):
+            continue
+        paths = {path: path.split('.') for path in _set_paths(node.children)}
+        missed: dict[str, None] = {}
+        missed_paths: set[str] = set()
+        seen: set[int] = set()
+        for entry in vanilla.lookup_all(target, node.name):
+            stack = [(child, [child.node]) for child in vanilla.children_of(entry)]
+            while stack:
+                child, chain = stack.pop()
+                if id(child.node) in seen:
+                    continue
+                seen.add(id(child.node))
+                for path, keys in paths.items():
+                    if (not any(_own_defines(n, keys) for n in chain)
+                            and not _covers(patched.get(child.node.name, set()), path)):
+                        missed[child.node.name] = None
+                        missed_paths.add(path)
+                stack.extend((grandchild, chain + [grandchild.node]) for grandchild in vanilla.children_of(child))
+        if missed:
+            names = sorted(missed)
+            shown = ', '.join(names[:INHERITORS_SHOWN]) + (f' and {len(names) - INHERITORS_SHOWN} more'
+                                                           if len(names) > INHERITORS_SHOWN else '')
+            fields = sorted(missed_paths)
+            field_text = ', '.join(fields[:3]) + (f' and {len(fields) - 3} more' if len(fields) > 3 else '')
+            findings.append(Finding('warning', file, node.line,
+                                    f'{len(names)} SID(s) inherit {field_text} from {node.name} through refkey and '
+                                    f'may not get this patch: {shown}. Patch them too if they should change'))
+    return findings
+
+
 def _sorts_after(name: str, other: str) -> bool:
     # In game 2026-11-10, the patch file whose name sorts later won. Whether that sort ignores case is untested, so
     # only a name that sorts later both ways is safe.
@@ -259,23 +337,30 @@ def check_parts(cfg_roots: list[Path], tables: Tables, vanilla: Vanilla,
     dlc_tables = dlc_tables or {}
     results: list[list[Finding]] = []
     main_sids: dict[Target, set[str]] = {}
+    main_patched: dict[Target, dict[str, set[str]]] = {}
     main_parsed: list[tuple[str, Target, list, str | None]] = []
     for number, cfg_root in enumerate(cfg_roots):
         findings, parsed = _scan(cfg_root, tables, dlc_tables)
         defined = _new_sids(parsed)
+        patched = _patched_paths(parsed)
         if number == 0:
-            main_sids, main_parsed = defined, parsed
+            main_sids, main_patched, main_parsed = defined, patched, parsed
         else:
             findings.extend(_order_findings(main_parsed, parsed))
             # The main part is always installed, so an option's refkey can name its new structs. Options install in
             # any combination, so one option's new structs do not count for another, or for the main part.
             defined = {target: sids | main_sids.get(target, set()) for target, sids in defined.items()}
+            for target, by_sid in main_patched.items():
+                for sid, paths in by_sid.items():
+                    patched.setdefault(target, {}).setdefault(sid, set()).update(paths)
         for file, target, roots, dlc in parsed:
             _check_unknown(roots, file, findings)
             if dlc:
                 _check_dlc_file(roots, dlc, file, findings)
             else:
                 _check_file(roots, target, vanilla, file, defined[target], findings)
+                if target.kind == 'binarized':
+                    findings.extend(_inheritance_findings(roots, target, vanilla, patched.get(target, {}), file))
         results.append(findings)
     return results
 

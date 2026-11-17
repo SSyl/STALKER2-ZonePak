@@ -29,6 +29,9 @@ Run `check`, fix what it reports, then `build` and copy `build\<Name>` into `~mo
 A SID that gets a nested struct only through its `refkey` parent is patched the same way. For example,
 `GunUDP_MagIncreased` does not define `EffectPrototypeSIDs` itself but gets it from `BigMagTemplate`. In a test on
 weapon setups, a patch that set only `RecoilRadius` on a setup that inherits `RecoilParams` kept every other inherited
-field, and a patch on the parent setup did not reach the setups that inherit from it. Patch each SID you want to
-change. The LaserTools mod reports the opposite for `LaserSight` in `ItemPrototypes`, where a partial patch on an
-inheriting item dropped the inherited fields, so if a patched struct misbehaves in game, list all of its fields.
+field. A patch on the parent setup did not reach the setups that inherit from it, and the same happened with a
+technician's upgrade list in `NPCPrototypes`, so patch each SID you want to change. `check` warns when a patch sets a
+field that other SIDs inherit from the patched one and the mod doesn't patch them too. Comments in the LaserTools
+mod report the opposite of the first result for `LaserSight` in `ItemPrototypes`, where a partial patch on an
+inheriting item is said to have dropped the inherited fields. That is unverified, but if a patched struct misbehaves
+in game, list all of its fields.

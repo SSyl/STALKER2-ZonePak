@@ -51,6 +51,7 @@ class Vanilla:
         self._entries: dict[Target, dict[str, list[Entry]]] = {}
         self._file_roots: dict[str, list] = {}
         self._merged: dict[int, cfg.Struct] = {}
+        self._children: dict[Target, dict[int, list[Entry]]] = {}
 
     def _files_of(self, target: Target) -> list[Path]:
         top = self.game_data / f'{target.table}.cfg'
@@ -107,6 +108,18 @@ class Vanilla:
             name = refkey[1:-1]
             return None if name.isdigit() else self.lookup(target, name)
         return self.lookup(target, refkey)
+
+    def children_of(self, entry: Entry) -> list[Entry]:
+        """The entries in entry's table whose refkey resolves to entry."""
+        if entry.table not in self._children:
+            index: dict[int, list[Entry]] = {}
+            for entries in self._load(entry.table).values():
+                for child in entries:
+                    parent = self.parent_of(child)
+                    if parent is not None and parent.table == entry.table:
+                        index.setdefault(id(parent.node), []).append(child)
+            self._children[entry.table] = index
+        return self._children[entry.table].get(id(entry.node), [])
 
     def merged(self, entry: Entry) -> cfg.Struct:
         key = id(entry.node)
