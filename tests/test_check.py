@@ -359,6 +359,10 @@ class SummarizeTest(unittest.TestCase):
         self.assertEqual(summarize(findings), ['warning: 5 (4 SIDs) not checked: A, B, C and 1 others',
                                                'a.cfg:2: error: e'])
 
+    def test_one_sid_patched_twice(self):
+        findings = [Finding('warning', 'a.cfg', n, 'w', 'not checked', 'A') for n in (1, 2)]
+        self.assertEqual(summarize(findings), ['warning: 2 (1 SID) not checked: A'])
+
     def test_a_group_of_one_prints_the_finding(self):
         self.assertEqual(summarize([Finding('warning', 'a.cfg', 1, 'w', 'g', 'A')]), ['a.cfg:1: warning: w'])
 

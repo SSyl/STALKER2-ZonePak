@@ -42,7 +42,9 @@ def summarize(findings: list[Finding]) -> list[str]:
             shown = ', '.join(items[:GROUP_SHOWN])
             if len(items) > GROUP_SHOWN:
                 shown += f' and {len(items) - GROUP_SHOWN} others'
-            count = f'{len(members)}' + (f' ({len(items)} SIDs)' if len(items) != len(members) else '')
+            count = f'{len(members)}'
+            if len(items) != len(members):
+                count += f' ({len(items)} SID{"" if len(items) == 1 else "s"})'
             lines.append(f'{f.level}: {count} {f.group}: {shown}')
     return lines
 
